@@ -84,6 +84,7 @@ class _StatsScreenState extends State<StatsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final currentUserId = AuthService.currentUser?.id;
 
     return Scaffold(
@@ -91,9 +92,10 @@ class _StatsScreenState extends State<StatsScreen>
         title: const Text('Stats'),
         bottom: TabBar(
           controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
-          indicatorColor: AppColors.primary,
+          labelColor: isDark ? AppColors.dmPrimary : AppColors.primary,
+          unselectedLabelColor:
+              isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
+          indicatorColor: isDark ? AppColors.dmPrimary : AppColors.primary,
           tabs: const [
             Tab(text: 'Points'),
             Tab(text: 'Quests'),
@@ -158,15 +160,19 @@ class _ScopeFilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.base,
         vertical: AppSpacing.md,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.background,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.dmCard : Colors.white,
         border: Border(
-          bottom: BorderSide(color: AppColors.divider),
+          bottom: BorderSide(
+            color: isDark ? AppColors.dmBorder : AppColors.divider,
+          ),
         ),
       ),
       child: Row(
@@ -208,6 +214,8 @@ class _ScopePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
@@ -218,10 +226,14 @@ class _ScopePill extends StatelessWidget {
           vertical: AppSpacing.xs + 2,
         ),
         decoration: BoxDecoration(
-          color: active ? AppColors.primary : AppColors.background,
+          color: active
+              ? (isDark ? AppColors.dmPrimary : AppColors.primary)
+              : (isDark ? AppColors.dmCard : Colors.white),
           borderRadius: BorderRadius.circular(AppRadius.pill),
           border: Border.all(
-            color: active ? AppColors.primary : AppColors.cardBorder,
+            color: active
+                ? (isDark ? AppColors.dmPrimary : AppColors.primary)
+                : (isDark ? AppColors.dmBorder : AppColors.cardBorder),
           ),
         ),
         child: Text(
@@ -229,7 +241,9 @@ class _ScopePill extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: active ? Colors.white : AppColors.textSecondary,
+            color: active
+                ? Colors.white
+                : (isDark ? AppColors.dmTextSecondary : AppColors.textSecondary),
           ),
         ),
       ),
@@ -244,22 +258,24 @@ class _NoCityMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
+          Icon(
             Icons.location_city_outlined,
             size: 48,
-            color: AppColors.textTertiary,
+            color: isDark ? AppColors.dmTextSecondary : AppColors.textTertiary,
           ),
           const SizedBox(height: AppSpacing.md),
           Text(
             'Set a home city in your profile to see $scope leaderboards',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
-              color: AppColors.textSecondary,
+              color: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -326,7 +342,7 @@ class _LeaderboardRow extends StatelessWidget {
     required this.isCurrentUser,
   });
 
-  Color get _rankColor {
+  Color _rankColor(bool isDark) {
     switch (entry.rank) {
       case 1:
         return const Color(0xFFFFD700);
@@ -335,54 +351,122 @@ class _LeaderboardRow extends StatelessWidget {
       case 3:
         return const Color(0xFFCD7F32);
       default:
-        return AppColors.textSecondary;
+        return isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+    }
+  }
+
+  Widget _buildRankWidget(bool isDark) {
+    switch (entry.rank) {
+      case 1:
+        return const Text(
+          '🥇',
+          style: TextStyle(fontSize: 20),
+          textAlign: TextAlign.center,
+        );
+      case 2:
+        return const Text(
+          '🥈',
+          style: TextStyle(fontSize: 20),
+          textAlign: TextAlign.center,
+        );
+      case 3:
+        return const Text(
+          '🥉',
+          style: TextStyle(fontSize: 20),
+          textAlign: TextAlign.center,
+        );
+      default:
+        return Text(
+          '${entry.rank}',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: _rankColor(isDark),
+          ),
+          textAlign: TextAlign.center,
+        );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final initials = entry.username.isNotEmpty
+        ? entry.username[0].toUpperCase()
+        : '?';
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.base,
         vertical: AppSpacing.md,
       ),
       decoration: BoxDecoration(
-        color: isCurrentUser ? AppColors.primaryLight : AppColors.background,
+        color: isCurrentUser
+            ? AppColors.primaryLight
+            : (isDark ? AppColors.dmCard : AppColors.background),
         borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.cardBorder),
+        border: Border.all(
+          color: isDark ? AppColors.dmBorder : AppColors.cardBorder,
+        ),
       ),
       child: Row(
         children: [
           SizedBox(
             width: 32,
-            child: Text(
-              '${entry.rank}',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: _rankColor,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            child: _buildRankWidget(isDark),
           ),
           const SizedBox(width: AppSpacing.md),
-          Expanded(
+          CircleAvatar(
+            radius: 12,
+            backgroundColor: AppColors.primaryLight,
             child: Text(
-              entry.username,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
+              initials,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: isDark ? AppColors.dmPrimary : AppColors.primary,
               ),
-              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    entry.username,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: isDark
+                          ? AppColors.dmTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (isCurrentUser) ...[
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    '(You)',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w400,
+                      color: isDark
+                          ? AppColors.dmTextSecondary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
           Text(
             '$value $valueLabel',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: isDark ? AppColors.dmPrimary : AppColors.primary,
             ),
           ),
         ],
