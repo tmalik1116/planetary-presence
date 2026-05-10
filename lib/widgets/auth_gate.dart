@@ -40,11 +40,25 @@ class _AppStartup extends StatefulWidget {
   State<_AppStartup> createState() => _AppStartupState();
 }
 
-class _AppStartupState extends State<_AppStartup> {
+class _AppStartupState extends State<_AppStartup> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     LocationService.updateUserCoordinates();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      LocationService.updateUserCoordinates();
+    }
   }
 
   @override
