@@ -59,6 +59,8 @@ class _AppStartup extends StatefulWidget {
 }
 
 class _AppStartupState extends State<_AppStartup> with WidgetsBindingObserver {
+  DateTime? _lastLocationUpdate;
+
   @override
   void initState() {
     super.initState();
@@ -75,7 +77,12 @@ class _AppStartupState extends State<_AppStartup> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      LocationService.updateUserCoordinates();
+      final now = DateTime.now();
+      if (_lastLocationUpdate == null ||
+          now.difference(_lastLocationUpdate!) > const Duration(minutes: 5)) {
+        _lastLocationUpdate = now;
+        LocationService.updateUserCoordinates();
+      }
     }
   }
 

@@ -6,10 +6,10 @@ import 'supabase_service.dart';
 class LocationService {
   static Future<Position?> getCurrentPosition() async {
     try {
-      LocationPermission permission = await Geolocator.requestPermission();
+      final permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied ||
           permission == LocationPermission.deniedForever) {
-        AppLogger.w('LocationService: permission denied ($permission)');
+        AppLogger.w('LocationService: permission not granted ($permission), skipping');
         return null;
       }
       final position = await Geolocator.getCurrentPosition(
