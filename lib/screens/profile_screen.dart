@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
@@ -241,13 +240,23 @@ class _ActivityGraph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final now = DateTime.now();
+    final startOfYear = DateTime(now.year, 1, 1);
+    // Pad to start on Monday
+    final startDay = startOfYear.subtract(
+      Duration(days: (startOfYear.weekday - 1) % 7),
+    );
 
-    // Convert Map<String, int> to Map<DateTime, int>
-    final Map<DateTime, int> datasets = {};
-    for (final entry in activityData.entries) {
-      try {
-        datasets[DateTime.parse(entry.key)] = entry.value;
-      } catch (_) {}
+    final List<List<DateTime?>> weeks = [];
+    var current = startDay;
+    while (!current.isAfter(now)) {
+      final week = <DateTime?>[];
+      for (int d = 0; d < 7; d++) {
+        final day = current.add(Duration(days: d));
+        week.add(day.isAfter(now) || day.isBefore(startOfYear) ? null : day);
+      }
+      weeks.add(week);
+      current = current.add(const Duration(days: 7));
     }
 
     return Column(
@@ -265,23 +274,44 @@ class _ActivityGraph extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        HeatMap(
-          datasets: datasets,
-          colorMode: ColorMode.opacity,
-          defaultColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
-          textColor: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
-          showColorTip: false,
-          showText: false,
-          scrollable: true,
-          size: 14,
-          colorsets: {
-            1: AppColors.primary.withValues(alpha: 0.3),
-            2: AppColors.primary.withValues(alpha: 0.5),
-            3: AppColors.primary.withValues(alpha: 0.7),
-            5: AppColors.primary,
-          },
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+          child: Column(
+            children: weeks.map((week) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Row(
+                  children: week.map((day) {
+                    if (day == null) {
+                      return const SizedBox(width: 14 + 3, height: 14);
+                    }
+                    final key =
+                        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+                    final count = activityData[key] ?? 0;
+                    final color = _cellColor(count, isDark);
+                    return Container(
+                      width: 14,
+                      height: 14,
+                      margin: const EdgeInsets.only(right: 3),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              );
+            }).toList(),
+          ),
         ),
       ],
     );
+  }
+
+  Color _cellColor(int count, bool isDark) {
+    if (count == 0) return isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+    if (count == 1) return AppColors.primary.withValues(alpha: 0.35);
+    if (count == 2) return AppColors.primary.withValues(alpha: 0.6);
+    return AppColors.primary;
   }
 }
