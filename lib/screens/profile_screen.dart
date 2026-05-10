@@ -286,7 +286,8 @@ class _ActivityGraph extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              const double cellSize = 14.0;
+              const double gap = 1.0;
+              final cellSize = (constraints.maxWidth - labelWidth - (6 * gap)) / 7;
 
               return Column(
                 children: List.generate(weeks.length, (weekIndex) {
@@ -325,27 +326,28 @@ class _ActivityGraph extends StatelessWidget {
                                 )
                               : null,
                         ),
-                        Expanded(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(7, (di) {
-                              final day = week[di];
-                              if (day == null) {
-                                return const SizedBox(width: 14, height: 14);
-                              }
-                              final key =
-                                  '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-                              final count = activityData[key] ?? 0;
-                              return Container(
-                                width: 14,
-                                height: 14,
-                                decoration: BoxDecoration(
-                                  color: _cellColor(count, isDark),
-                                  borderRadius: BorderRadius.circular(3),
-                                ),
+                        Row(
+                          children: List.generate(7, (di) {
+                            final day = week[di];
+                            if (day == null) {
+                              return SizedBox(
+                                width: cellSize + (di < 6 ? gap : 0),
+                                height: cellSize,
                               );
-                            }),
-                          ),
+                            }
+                            final key =
+                                '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+                            final count = activityData[key] ?? 0;
+                            return Container(
+                              width: cellSize,
+                              height: cellSize,
+                              margin: EdgeInsets.only(right: di < 6 ? gap : 0.0),
+                              decoration: BoxDecoration(
+                                color: _cellColor(count, isDark),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            );
+                          }),
                         ),
                       ],
                     ),
