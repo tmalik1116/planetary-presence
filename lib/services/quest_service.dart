@@ -1,44 +1,69 @@
 import '../models/quest.dart';
+import 'logger_service.dart';
 import 'supabase_service.dart';
 
 class QuestService {
   Future<List<Quest>> getActiveQuests({String? cityId}) async {
-    var query = SupabaseService.client
-        .from('quests')
-        .select()
-        .eq('status', 'active');
+    try {
+      var query = SupabaseService.client
+          .from('quests')
+          .select()
+          .eq('status', 'active');
 
-    if (cityId != null) {
-      query = query.eq('city_id', cityId);
+      if (cityId != null) {
+        query = query.eq('city_id', cityId);
+      }
+
+      final data = await query;
+      final quests = data.map((row) => Quest.fromJson(row)).toList();
+      AppLogger.i('Fetched ${quests.length} active quests');
+      return quests;
+    } catch (e, st) {
+      AppLogger.e('Failed to fetch active quests', error: e, stackTrace: st);
+      rethrow;
     }
-
-    final data = await query;
-    return data.map((row) => Quest.fromJson(row)).toList();
   }
 
   Future<List<Quest>> getPendingQuests({String? cityId}) async {
-    var query = SupabaseService.client
-        .from('quests')
-        .select()
-        .eq('status', 'pending');
+    try {
+      var query = SupabaseService.client
+          .from('quests')
+          .select()
+          .eq('status', 'pending');
 
-    if (cityId != null) {
-      query = query.eq('city_id', cityId);
+      if (cityId != null) {
+        query = query.eq('city_id', cityId);
+      }
+
+      final data = await query;
+      final quests = data.map((row) => Quest.fromJson(row)).toList();
+      AppLogger.i('Fetched ${quests.length} pending quests');
+      return quests;
+    } catch (e, st) {
+      AppLogger.e('Failed to fetch pending quests', error: e, stackTrace: st);
+      rethrow;
     }
-
-    final data = await query;
-    return data.map((row) => Quest.fromJson(row)).toList();
   }
 
   Future<Quest?> getQuestById(String id) async {
-    final data = await SupabaseService.client
-        .from('quests')
-        .select()
-        .eq('id', id)
-        .maybeSingle();
+    try {
+      final data = await SupabaseService.client
+          .from('quests')
+          .select()
+          .eq('id', id)
+          .maybeSingle();
 
-    if (data == null) return null;
-    return Quest.fromJson(data);
+      if (data == null) {
+        AppLogger.i('Quest not found: $id');
+        return null;
+      }
+      final quest = Quest.fromJson(data);
+      AppLogger.i('Fetched quest: $id');
+      return quest;
+    } catch (e, st) {
+      AppLogger.e('Failed to fetch quest: $id', error: e, stackTrace: st);
+      rethrow;
+    }
   }
 
   Future<Quest> createQuest({
@@ -48,19 +73,26 @@ class QuestService {
     required String cityId,
     required String createdBy,
   }) async {
-    final data = await SupabaseService.client
-        .from('quests')
-        .insert({
-          'title': title,
-          'description': description,
-          'category': category.value,
-          'city_id': cityId,
-          'created_by': createdBy,
-        })
-        .select()
-        .single();
+    try {
+      final data = await SupabaseService.client
+          .from('quests')
+          .insert({
+            'title': title,
+            'description': description,
+            'category': category.value,
+            'city_id': cityId,
+            'created_by': createdBy,
+          })
+          .select()
+          .single();
 
-    return Quest.fromJson(data);
+      final quest = Quest.fromJson(data);
+      AppLogger.i('Quest created: ${quest.id}');
+      return quest;
+    } catch (e, st) {
+      AppLogger.e('Failed to create quest', error: e, stackTrace: st);
+      rethrow;
+    }
   }
 
   Future<Quest> updateQuest(
@@ -69,23 +101,36 @@ class QuestService {
     String? description,
     QuestCategory? category,
   }) async {
-    final updates = <String, dynamic>{};
-    if (title != null) updates['title'] = title;
-    if (description != null) updates['description'] = description;
-    if (category != null) updates['category'] = category.value;
+    try {
+      final updates = <String, dynamic>{};
+      if (title != null) updates['title'] = title;
+      if (description != null) updates['description'] = description;
+      if (category != null) updates['category'] = category.value;
 
-    final data = await SupabaseService.client
-        .from('quests')
-        .update(updates)
-        .eq('id', id)
-        .select()
-        .single();
+      final data = await SupabaseService.client
+          .from('quests')
+          .update(updates)
+          .eq('id', id)
+          .select()
+          .single();
 
-    return Quest.fromJson(data);
+      final quest = Quest.fromJson(data);
+      AppLogger.i('Quest updated: $id');
+      return quest;
+    } catch (e, st) {
+      AppLogger.e('Failed to update quest: $id', error: e, stackTrace: st);
+      rethrow;
+    }
   }
 
   Future<void> deleteQuest(String id) async {
-    await SupabaseService.client.from('quests').delete().eq('id', id);
+    try {
+      await SupabaseService.client.from('quests').delete().eq('id', id);
+      AppLogger.i('Quest deleted: $id');
+    } catch (e, st) {
+      AppLogger.e('Failed to delete quest: $id', error: e, stackTrace: st);
+      rethrow;
+    }
   }
 
   Future<void> voteQuest(
@@ -93,34 +138,41 @@ class QuestService {
     String userId,
     String vote,
   ) async {
-    await SupabaseService.client.from('quest_votes').upsert({
-      'quest_id': questId,
-      'user_id': userId,
-      'vote': vote,
-    });
+    try {
+      await SupabaseService.client.from('quest_votes').upsert({
+        'quest_id': questId,
+        'user_id': userId,
+        'vote': vote,
+      });
 
-    final upVotes = await SupabaseService.client
-        .from('quest_votes')
-        .select()
-        .eq('quest_id', questId)
-        .eq('vote', 'up');
+      final upVotes = await SupabaseService.client
+          .from('quest_votes')
+          .select()
+          .eq('quest_id', questId)
+          .eq('vote', 'up');
 
-    final downVotes = await SupabaseService.client
-        .from('quest_votes')
-        .select()
-        .eq('quest_id', questId)
-        .eq('vote', 'down');
+      final downVotes = await SupabaseService.client
+          .from('quest_votes')
+          .select()
+          .eq('quest_id', questId)
+          .eq('vote', 'down');
 
-    final netVotes = upVotes.length - downVotes.length;
+      final netVotes = upVotes.length - downVotes.length;
 
-    final updatePayload = <String, dynamic>{'net_votes': netVotes};
-    if (netVotes >= 100) {
-      updatePayload['status'] = 'active';
+      final updatePayload = <String, dynamic>{'net_votes': netVotes};
+      if (netVotes >= 100) {
+        updatePayload['status'] = 'active';
+      }
+
+      await SupabaseService.client
+          .from('quests')
+          .update(updatePayload)
+          .eq('id', questId);
+
+      AppLogger.i('Vote recorded for quest: $questId ($vote, net: $netVotes)');
+    } catch (e, st) {
+      AppLogger.e('Failed to vote on quest: $questId', error: e, stackTrace: st);
+      rethrow;
     }
-
-    await SupabaseService.client
-        .from('quests')
-        .update(updatePayload)
-        .eq('id', questId);
   }
 }
