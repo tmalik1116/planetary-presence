@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'services/logger_service.dart';
-import 'widgets/bottom_nav.dart';
+import 'widgets/auth_gate.dart';
 
 final themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
 
@@ -40,7 +40,7 @@ class TrailblazerApp extends StatelessWidget {
               secondary: Colors.deepPurpleAccent,
             ),
           ),
-          home: const MainShell(),
+          home: const AuthGate(),
         );
       },
     );

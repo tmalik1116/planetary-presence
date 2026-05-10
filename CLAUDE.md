@@ -82,6 +82,7 @@ Central `+` button = primary action (record/complete quest). Visually distinct f
 | Charts | `fl_charts` | planned |
 | Maps | TBD | planned |
 | Backend | Supabase | ✅ `supabase_flutter ^2.8.4` |
+| Auth | Supabase Auth + google_sign_in ^6.2.2 | ✅ |
 | Database | Supabase Postgres + PostGIS | ✅ migration SQL ready |
 | State mgmt | TBD | pending decision |
 
@@ -137,3 +138,4 @@ lib/
 | 2026-05-09 | Quests screen: Active/Pending tabs, QuestCard, create form wired to Supabase | subagent |
 | 2026-05-10 | AppLogger: console + file logging, wired to QuestService and ProfileScreen | subagent |
 | 2026-05-10 | Light mode + Settings screen with theme toggle | subagent |
+| 2026-05-10 | Auth: email/password + Google OAuth, onboarding (username + home city) | subagent |
