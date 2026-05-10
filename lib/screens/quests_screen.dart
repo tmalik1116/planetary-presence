@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/quest.dart';
+import '../services/auth_service.dart';
 import '../services/quest_service.dart';
 import '../widgets/quest_card.dart';
-
-const _testUserId = '00000000-0000-0000-0000-000000000002';
-const _testCityId = '00000000-0000-0000-0000-000000000001';
 
 class QuestsScreen extends StatefulWidget {
   const QuestsScreen({super.key});
@@ -74,13 +72,11 @@ class _QuestsScreenState extends State<QuestsScreen>
             _QuestList(
               key: ValueKey('active-$_activeKey'),
               fetchQuests: () => QuestService().getActiveQuests(),
-              testUserId: _testUserId,
               onVoted: _refresh,
             ),
             _QuestList(
               key: ValueKey('pending-$_pendingKey'),
               fetchQuests: () => QuestService().getPendingQuests(),
-              testUserId: _testUserId,
               onVoted: _refreshPending,
             ),
           ],
@@ -97,13 +93,11 @@ class _QuestsScreenState extends State<QuestsScreen>
 
 class _QuestList extends StatelessWidget {
   final Future<List<Quest>> Function() fetchQuests;
-  final String testUserId;
   final VoidCallback onVoted;
 
   const _QuestList({
     super.key,
     required this.fetchQuests,
-    required this.testUserId,
     required this.onVoted,
   });
 
@@ -136,7 +130,6 @@ class _QuestList extends StatelessWidget {
           itemCount: quests.length,
           itemBuilder: (context, index) => QuestCard(
             quest: quests[index],
-            testUserId: testUserId,
             onVoted: onVoted,
           ),
         );
@@ -158,8 +151,7 @@ class _CreateQuestSheetState extends State<_CreateQuestSheet> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
-  final _cityIdController = TextEditingController(text: _testCityId);
-  final _userIdController = TextEditingController(text: _testUserId);
+  final _cityIdController = TextEditingController();
 
   QuestCategory _selectedCategory = QuestCategory.nature;
   bool _loading = false;
@@ -169,12 +161,13 @@ class _CreateQuestSheetState extends State<_CreateQuestSheet> {
     _titleController.dispose();
     _descriptionController.dispose();
     _cityIdController.dispose();
-    _userIdController.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final uid = AuthService.currentUser?.id;
+    if (uid == null) return;
 
     setState(() => _loading = true);
     try {
@@ -185,7 +178,7 @@ class _CreateQuestSheetState extends State<_CreateQuestSheet> {
             : _descriptionController.text.trim(),
         category: _selectedCategory,
         cityId: _cityIdController.text.trim(),
-        createdBy: _userIdController.text.trim(),
+        createdBy: uid,
       );
       widget.onCreated();
       if (mounted) Navigator.of(context).pop();
@@ -274,17 +267,6 @@ class _CreateQuestSheetState extends State<_CreateQuestSheet> {
                 ),
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'City ID is required' : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _userIdController,
-                decoration: const InputDecoration(
-                  labelText: 'Created By (User ID)',
-                  border: OutlineInputBorder(),
-                  helperText: 'Replace with real ID from Supabase',
-                ),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'User ID is required' : null,
               ),
               const SizedBox(height: 20),
               ElevatedButton(

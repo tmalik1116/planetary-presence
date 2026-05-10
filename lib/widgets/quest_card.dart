@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../models/quest.dart';
+import '../services/auth_service.dart';
 import '../services/quest_service.dart';
 
 class QuestCard extends StatelessWidget {
   final Quest quest;
-  final String testUserId;
   final VoidCallback? onVoted;
 
   const QuestCard({
     super.key,
     required this.quest,
-    required this.testUserId,
     this.onVoted,
   });
 
@@ -30,7 +29,8 @@ class QuestCard extends StatelessWidget {
 
   Future<void> _vote(BuildContext context, String vote) async {
     try {
-      await QuestService().voteQuest(quest.id, testUserId, vote);
+      final uid = AuthService.currentUser?.id ?? '';
+      await QuestService().voteQuest(quest.id, uid, vote);
       onVoted?.call();
     } catch (e) {
       if (context.mounted) {
