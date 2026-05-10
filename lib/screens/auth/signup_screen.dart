@@ -30,6 +30,18 @@ class _SignupScreenState extends State<SignupScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red.shade700,
+        duration: const Duration(milliseconds: 5000),
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.success,
+        duration: const Duration(milliseconds: 5000),
       ),
     );
   }
@@ -42,6 +54,13 @@ class _SignupScreenState extends State<SignupScreen> {
         _emailController.text.trim(),
         _passwordController.text,
       );
+      // If session exists, AuthGate handles redirect automatically.
+      // If no session, email confirmation is required — show message and go to login.
+      if (mounted && AuthService.currentUser?.emailConfirmedAt == null) {
+        _showSuccess('Account created! Check your email to confirm then sign in.');
+        await Future.delayed(const Duration(milliseconds: 1500));
+        if (mounted) Navigator.of(context).pop();
+      }
     } catch (e) {
       _showError(e.toString());
     } finally {

@@ -29,6 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red.shade700,
+        duration: const Duration(milliseconds: 5000),
       ),
     );
   }
