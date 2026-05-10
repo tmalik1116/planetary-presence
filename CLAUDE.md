@@ -166,4 +166,5 @@ lib/
 | 2026-05-10 | CityService + CityData model; map screen loads city pins from Supabase (#12) | subagent |
 | 2026-05-10 | Profile header: ProfileService, username/points/join date/home city display (#26) | subagent |
 | 2026-05-10 | Stats screen: StatsService, LeaderboardEntry model, global points leaderboard (#22) | subagent |
+| 2026-05-10 | Quest detail screen: read-only view with hero header, description, info, vote section; QuestCard taps navigate to it (#43) | subagent |
 | 2026-05-10 | Map split-view: city tap opens quest panel (55% map / 45% list), slide animation (#9) | subagent |
