@@ -4,6 +4,8 @@ import 'config/supabase_config.dart';
 import 'services/logger_service.dart';
 import 'widgets/bottom_nav.dart';
 
+final themeModeNotifier = ValueNotifier<ThemeMode>(ThemeMode.dark);
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppLogger.init();
@@ -19,16 +21,28 @@ class TrailblazerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Trailblazer',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        colorScheme: ColorScheme.dark(
-          primary: Colors.deepPurpleAccent,
-          secondary: Colors.deepPurpleAccent,
-        ),
-      ),
-      home: const MainShell(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeModeNotifier,
+      builder: (context, themeMode, _) {
+        return MaterialApp(
+          title: 'Trailblazer',
+          debugShowCheckedModeBanner: false,
+          themeMode: themeMode,
+          theme: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.deepPurple,
+              secondary: Colors.deepPurple,
+            ),
+          ),
+          darkTheme: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: Colors.deepPurpleAccent,
+              secondary: Colors.deepPurpleAccent,
+            ),
+          ),
+          home: const MainShell(),
+        );
+      },
     );
   }
 }

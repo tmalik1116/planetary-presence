@@ -136,3 +136,4 @@ lib/
 | 2026-05-09 | Quest model + QuestService CRUD | subagent |
 | 2026-05-09 | Quests screen: Active/Pending tabs, QuestCard, create form wired to Supabase | subagent |
 | 2026-05-10 | AppLogger: console + file logging, wired to QuestService and ProfileScreen | subagent |
+| 2026-05-10 | Light mode + Settings screen with theme toggle | subagent |
