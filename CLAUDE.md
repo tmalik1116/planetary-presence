@@ -89,7 +89,7 @@ Central `+` button = primary action (record/complete quest). Visually distinct f
 | Flutter SDK | `flutter` | ✅ initialized |
 | Icons | `cupertino_icons ^1.0.8` | ✅ |
 | Charts | `fl_charts` | planned |
-| Maps | TBD | planned |
+| Maps | flutter_map ^8.1.1 + latlong2 ^0.9.1 | ✅ |
 | Backend | Supabase | ✅ `supabase_flutter ^2.8.4` |
 | Auth | Supabase Auth + google_sign_in ^6.2.2 | ✅ |
 | Database | Supabase Postgres + PostGIS | ✅ migration SQL ready |
@@ -151,3 +151,4 @@ lib/
 | 2026-05-10 | Auth: email/password + Google OAuth, onboarding (username + home city) | subagent |
 | 2026-05-10 | Design system: AppTheme, AppColors, AppSpacing, redesigned nav + cards | subagent |
 | 2026-05-10 | GPS location service, user coordinates update on login | subagent |
+| 2026-05-10 | Map screen: flutter_map integration, OSM tiles, placeholder city markers | subagent |
