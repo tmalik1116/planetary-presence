@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/friend_service.dart';
 import '../services/profile_service.dart';
 import '../services/stats_service.dart';
 
-enum _LeaderboardScope { global, city, country }
+enum _LeaderboardScope { global, city, country, friends }
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -18,12 +19,16 @@ class _StatsScreenState extends State<StatsScreen>
   late final TabController _tabController;
 
   _LeaderboardScope _scope = _LeaderboardScope.global;
+  bool _lastMonth = false;
+
   List<LeaderboardEntry> _leaderboard = [];
   bool _loading = true;
   String? _error;
 
   ProfileData? _profile;
   bool _profileLoaded = false;
+  List<String> _friendIds = [];
+  int _friendCount = 0;
 
   @override
   void initState() {
@@ -42,6 +47,10 @@ class _StatsScreenState extends State<StatsScreen>
     final userId = AuthService.currentUser?.id;
     if (userId != null) {
       _profile = await ProfileService().getProfile(userId);
+      final friendIds = await FriendService().getFriendIds(userId);
+      _friendCount = friendIds.length;
+      // Include self so the current user appears in their own friends leaderboard
+      _friendIds = [userId, ...friendIds];
     }
     setState(() => _profileLoaded = true);
     await _loadLeaderboard();
@@ -57,6 +66,8 @@ class _StatsScreenState extends State<StatsScreen>
         scope: _scope.name,
         cityId: _profile?.homeCityId,
         country: _profile?.homeCityCountry,
+        friendIds: _friendIds,
+        lastMonth: _lastMonth,
       );
       setState(() {
         _leaderboard = entries;
@@ -76,11 +87,20 @@ class _StatsScreenState extends State<StatsScreen>
     _loadLeaderboard();
   }
 
+  void _toggleLastMonth(bool val) {
+    setState(() => _lastMonth = val);
+    _loadLeaderboard();
+  }
+
   bool get _needsHomeCity =>
       _scope != _LeaderboardScope.global &&
+      _scope != _LeaderboardScope.friends &&
       (_scope == _LeaderboardScope.city
           ? _profile?.homeCityId == null
           : _profile?.homeCityCountry == null);
+
+  bool get _noFriends =>
+      _scope == _LeaderboardScope.friends && _friendCount == 0;
 
   @override
   Widget build(BuildContext context) {
@@ -115,48 +135,76 @@ class _StatsScreenState extends State<StatsScreen>
             selected: _scope,
             onSelected: _setScope,
           ),
+          // Last Month / All Time toggle
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.base, AppSpacing.xs, AppSpacing.base, 0),
+            child: Row(
+              children: [
+                _ToggleChip(
+                  label: 'All Time',
+                  active: !_lastMonth,
+                  onTap: () => _toggleLastMonth(false),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                _ToggleChip(
+                  label: 'Last 30 Days',
+                  active: _lastMonth,
+                  onTap: () => _toggleLastMonth(true),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
           Expanded(
             child: _profileLoaded && _needsHomeCity
                 ? _NoCityMessage(
                     scope: _scope == _LeaderboardScope.city ? 'city' : 'country',
                   )
-                : _loading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _error != null
-                        ? Center(
-                            child: Text(
-                              _error!,
-                              style: const TextStyle(color: Colors.red),
-                              textAlign: TextAlign.center,
-                            ),
-                          )
-                        : TabBarView(
-                            controller: _tabController,
-                            children: [
-                              _LeaderboardList(
-                                entries: _leaderboard,
-                                currentUserId: currentUserId,
-                                valueLabel: 'pts',
-                                getValue: (e) => e.totalPoints,
-                                onRefresh: _loadLeaderboard,
-                                isDark: isDark,
+                : _noFriends
+                    ? const _NoFriendsMessage()
+                    : _loading
+                        ? const Center(child: CircularProgressIndicator())
+                        : _error != null
+                            ? Center(
+                                child: Text(
+                                  _error!,
+                                  style: const TextStyle(color: Colors.red),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            : TabBarView(
+                                controller: _tabController,
+                                children: [
+                                  _LeaderboardList(
+                                    entries: _leaderboard,
+                                    currentUserId: currentUserId,
+                                    valueLabel: 'pts',
+                                    getValue: (e) => e.totalPoints,
+                                    onRefresh: _loadLeaderboard,
+                                    isDark: isDark,
+                                  ),
+                                  _LeaderboardList(
+                                    entries: List.from(_leaderboard)
+                                      ..sort((a, b) =>
+                                          b.questCount.compareTo(a.questCount)),
+                                    currentUserId: currentUserId,
+                                    valueLabel: 'quests',
+                                    getValue: (e) => e.questCount,
+                                    onRefresh: _loadLeaderboard,
+                                    isDark: isDark,
+                                    rerank: true,
+                                  ),
+                                ],
                               ),
-                              _LeaderboardList(
-                                entries: _leaderboard,
-                                currentUserId: currentUserId,
-                                valueLabel: 'pts',
-                                getValue: (e) => e.totalPoints,
-                                onRefresh: _loadLeaderboard,
-                                isDark: isDark,
-                              ),
-                            ],
-                          ),
           ),
         ],
       ),
     );
   }
 }
+
+// ─── Hero Card ────────────────────────────────────────────────────────────────
 
 class _HeroCard extends StatelessWidget {
   final ProfileData? profile;
@@ -224,10 +272,7 @@ class _HeroCard extends StatelessWidget {
                     children: [
                       const Text(
                         'Your Ranking',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.white),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -241,13 +286,9 @@ class _HeroCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Opacity(
+                const Opacity(
                   opacity: 0.3,
-                  child: const Icon(
-                    Icons.emoji_events,
-                    color: Colors.white,
-                    size: 40,
-                  ),
+                  child: Icon(Icons.emoji_events, color: Colors.white, size: 40),
                 ),
                 Expanded(
                   child: Column(
@@ -255,10 +296,7 @@ class _HeroCard extends StatelessWidget {
                     children: [
                       const Text(
                         'Total Points',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.white),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -277,6 +315,8 @@ class _HeroCard extends StatelessWidget {
     );
   }
 }
+
+// ─── Scope Filter Row ─────────────────────────────────────────────────────────
 
 class _ScopeFilterRow extends StatelessWidget {
   final _LeaderboardScope selected;
@@ -304,27 +344,36 @@ class _ScopeFilterRow extends StatelessWidget {
           ),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _ScopePill(
-            label: 'Global',
-            active: selected == _LeaderboardScope.global,
-            onTap: () => onSelected(_LeaderboardScope.global),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          _ScopePill(
-            label: 'City',
-            active: selected == _LeaderboardScope.city,
-            onTap: () => onSelected(_LeaderboardScope.city),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          _ScopePill(
-            label: 'Country',
-            active: selected == _LeaderboardScope.country,
-            onTap: () => onSelected(_LeaderboardScope.country),
-          ),
-        ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _ScopePill(
+              label: 'Global',
+              active: selected == _LeaderboardScope.global,
+              onTap: () => onSelected(_LeaderboardScope.global),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _ScopePill(
+              label: 'City',
+              active: selected == _LeaderboardScope.city,
+              onTap: () => onSelected(_LeaderboardScope.city),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _ScopePill(
+              label: 'Country',
+              active: selected == _LeaderboardScope.country,
+              onTap: () => onSelected(_LeaderboardScope.country),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _ScopePill(
+              label: 'Friends',
+              active: selected == _LeaderboardScope.friends,
+              onTap: () => onSelected(_LeaderboardScope.friends),
+              icon: Icons.people_outline,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -334,16 +383,19 @@ class _ScopePill extends StatelessWidget {
   final String label;
   final bool active;
   final VoidCallback onTap;
+  final IconData? icon;
 
   const _ScopePill({
     required this.label,
     required this.active,
     required this.onTap,
+    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = isDark ? AppColors.dmPrimary : AppColors.primary;
 
     return GestureDetector(
       onTap: onTap,
@@ -356,22 +408,86 @@ class _ScopePill extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: active
-              ? (isDark ? AppColors.dmPrimary : AppColors.primary)
+              ? activeColor
               : (isDark ? AppColors.dmCard : Colors.white),
           borderRadius: BorderRadius.circular(AppRadius.pill),
           border: Border.all(
             color: active
-                ? (isDark ? AppColors.dmPrimary : AppColors.primary)
+                ? activeColor
+                : (isDark ? AppColors.dmBorder : AppColors.cardBorder),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(
+                icon,
+                size: 14,
+                color: active
+                    ? Colors.white
+                    : (isDark
+                        ? AppColors.dmTextSecondary
+                        : AppColors.textSecondary),
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: active
+                    ? Colors.white
+                    : (isDark
+                        ? AppColors.dmTextSecondary
+                        : AppColors.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ToggleChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _ToggleChip({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = isDark ? AppColors.dmPrimary : AppColors.primary;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? activeColor.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(
+            color: active
+                ? activeColor
                 : (isDark ? AppColors.dmBorder : AppColors.cardBorder),
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+            fontSize: 12,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
             color: active
-                ? Colors.white
+                ? activeColor
                 : (isDark ? AppColors.dmTextSecondary : AppColors.textSecondary),
           ),
         ),
@@ -380,25 +496,23 @@ class _ScopePill extends StatelessWidget {
   }
 }
 
+// ─── Empty States ─────────────────────────────────────────────────────────────
+
 class _NoCityMessage extends StatelessWidget {
   final String scope;
-
   const _NoCityMessage({required this.scope});
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.location_city_outlined,
-            size: 48,
-            color: isDark ? AppColors.dmTextSecondary : AppColors.textTertiary,
-          ),
+          Icon(Icons.location_city_outlined,
+              size: 48,
+              color: isDark ? AppColors.dmTextSecondary : AppColors.textTertiary),
           const SizedBox(height: AppSpacing.md),
           Text(
             'Set a home city in your profile to see $scope leaderboards',
@@ -414,6 +528,46 @@ class _NoCityMessage extends StatelessWidget {
   }
 }
 
+class _NoFriendsMessage extends StatelessWidget {
+  const _NoFriendsMessage();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.people_outline,
+              size: 48,
+              color: isDark ? AppColors.dmTextSecondary : AppColors.textTertiary),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'No friends yet',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.dmTextPrimary : AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Find people to add from your Profile page',
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Leaderboard List ─────────────────────────────────────────────────────────
+
 class _LeaderboardList extends StatelessWidget {
   final List<LeaderboardEntry> entries;
   final String? currentUserId;
@@ -421,6 +575,7 @@ class _LeaderboardList extends StatelessWidget {
   final int Function(LeaderboardEntry) getValue;
   final Future<void> Function() onRefresh;
   final bool isDark;
+  final bool rerank;
 
   const _LeaderboardList({
     required this.entries,
@@ -429,6 +584,7 @@ class _LeaderboardList extends StatelessWidget {
     required this.getValue,
     required this.onRefresh,
     required this.isDark,
+    this.rerank = false,
   });
 
   @override
@@ -438,11 +594,10 @@ class _LeaderboardList extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.leaderboard_outlined,
-              size: 48,
-              color: isDark ? AppColors.dmTextSecondary : AppColors.textTertiary,
-            ),
+            Icon(Icons.leaderboard_outlined,
+                size: 48,
+                color:
+                    isDark ? AppColors.dmTextSecondary : AppColors.textTertiary),
             const SizedBox(height: AppSpacing.md),
             Text(
               'No rankings yet',
@@ -457,7 +612,9 @@ class _LeaderboardList extends StatelessWidget {
               'Complete quests to appear on the leaderboard',
               style: TextStyle(
                 fontSize: 13,
-                color: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
+                color: isDark
+                    ? AppColors.dmTextSecondary
+                    : AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -473,8 +630,7 @@ class _LeaderboardList extends StatelessWidget {
           vertical: AppSpacing.base,
         ),
         itemCount: entries.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(height: AppSpacing.sm),
+        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
         itemBuilder: (context, index) {
           final entry = entries[index];
           return _LeaderboardRow(
@@ -482,6 +638,8 @@ class _LeaderboardList extends StatelessWidget {
             value: getValue(entry),
             valueLabel: valueLabel,
             isCurrentUser: entry.userId == currentUserId,
+            // If reranked (Quests tab), use index+1 as the visual rank
+            displayRank: rerank ? index + 1 : entry.rank,
           );
         },
       ),
@@ -489,21 +647,25 @@ class _LeaderboardList extends StatelessWidget {
   }
 }
 
+// ─── Leaderboard Row ──────────────────────────────────────────────────────────
+
 class _LeaderboardRow extends StatelessWidget {
   final LeaderboardEntry entry;
   final int value;
   final String valueLabel;
   final bool isCurrentUser;
+  final int displayRank;
 
   const _LeaderboardRow({
     required this.entry,
     required this.value,
     required this.valueLabel,
     required this.isCurrentUser,
+    required this.displayRank,
   });
 
   Color _rankColor(bool isDark) {
-    switch (entry.rank) {
+    switch (displayRank) {
       case 1:
         return const Color(0xFFFFD700);
       case 2:
@@ -516,29 +678,16 @@ class _LeaderboardRow extends StatelessWidget {
   }
 
   Widget _buildRankWidget(bool isDark) {
-    final isTop3 = entry.rank <= 3;
-    switch (entry.rank) {
+    switch (displayRank) {
       case 1:
-        return Text(
-          '🥇',
-          style: TextStyle(fontSize: isTop3 ? 24 : 20),
-          textAlign: TextAlign.center,
-        );
+        return const Text('🥇', style: TextStyle(fontSize: 24), textAlign: TextAlign.center);
       case 2:
-        return Text(
-          '🥈',
-          style: TextStyle(fontSize: isTop3 ? 24 : 20),
-          textAlign: TextAlign.center,
-        );
+        return const Text('🥈', style: TextStyle(fontSize: 24), textAlign: TextAlign.center);
       case 3:
-        return Text(
-          '🥉',
-          style: TextStyle(fontSize: isTop3 ? 24 : 20),
-          textAlign: TextAlign.center,
-        );
+        return const Text('🥉', style: TextStyle(fontSize: 24), textAlign: TextAlign.center);
       default:
         return Text(
-          '${entry.rank}',
+          '$displayRank',
           style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w700,
@@ -552,12 +701,11 @@ class _LeaderboardRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isTop3 = entry.rank <= 3;
+    final isTop3 = displayRank <= 3;
     final initials = entry.username.isNotEmpty
         ? entry.username[0].toUpperCase()
         : '?';
     final verticalPadding = isTop3 ? AppSpacing.base + 4 : AppSpacing.md;
-    final usernameFontSize = isTop3 ? 16.0 : 15.0;
 
     return Container(
       padding: EdgeInsets.symmetric(
@@ -580,10 +728,7 @@ class _LeaderboardRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 32,
-            child: _buildRankWidget(isDark),
-          ),
+          SizedBox(width: 32, child: _buildRankWidget(isDark)),
           const SizedBox(width: AppSpacing.md),
           CircleAvatar(
             radius: 12,
@@ -605,7 +750,7 @@ class _LeaderboardRow extends StatelessWidget {
                   child: Text(
                     entry.username,
                     style: TextStyle(
-                      fontSize: usernameFontSize,
+                      fontSize: isTop3 ? 16.0 : 15.0,
                       fontWeight: FontWeight.w500,
                       color: isDark
                           ? AppColors.dmTextPrimary

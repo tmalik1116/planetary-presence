@@ -39,7 +39,12 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
       if (mounted) setState(() => _loadingCompletion = false);
       return;
     }
-    final comp = await CompletionService().getCompletionForQuest(_quest.id, uid);
+    Map<String, dynamic>? comp = await CompletionService().getCompletionForQuest(_quest.id, uid);
+    
+    if (comp == null) {
+      comp = await CompletionService().getLatestCompletionForQuest(_quest.id);
+    }
+
     if (mounted) {
       setState(() {
         _completion = comp;
@@ -346,12 +351,16 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                       children: [
                         Icon(Icons.check_circle, color: green, size: 20),
                         const SizedBox(width: 8),
-                        Text(
-                          'You completed this quest!',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: titleColor,
+                        Expanded(
+                          child: Text(
+                            _completion!['user_id'] == AuthService.currentUser?.id
+                                ? 'You completed this quest!'
+                                : '${_completion!['users']?['username'] ?? 'Someone'} completed this quest!',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.bold,
+                              color: titleColor,
+                            ),
                           ),
                         ),
                       ],

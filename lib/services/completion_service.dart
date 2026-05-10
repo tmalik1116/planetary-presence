@@ -78,6 +78,24 @@ class CompletionService {
     }
   }
 
+  /// Fetches the most recent completion for a quest by any friend, for display
+  /// on the detail screen when viewing a friend's completed quest.
+  Future<Map<String, dynamic>?> getLatestCompletionForQuest(String questId) async {
+    try {
+      final data = await _client
+          .from('completions')
+          .select('*, users!completions_user_id_fkey(username)')
+          .eq('quest_id', questId)
+          .order('completed_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      return data;
+    } catch (e, st) {
+      AppLogger.e('CompletionService: getLatestCompletionForQuest failed', error: e, stackTrace: st);
+      return null;
+    }
+  }
+
   /// Searches for users by username prefix (for the tag-friends picker).
   ///
   /// Excludes [excludeUserId] (the current user) from results.

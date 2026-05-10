@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/friend_service.dart';
 import '../services/profile_service.dart';
 import 'settings_screen.dart';
 
@@ -17,12 +18,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, int> _activityData = {};
   PersonalRecords _records = const PersonalRecords(bestDayQuests: 0, bestDayPoints: 0);
 
+  // Friends state
+  List<FriendUser> _friends = [];
+  List<FriendUser> _pendingIncoming = [];
+  final _friendService = FriendService();
+  final _searchController = TextEditingController();
+  List<FriendUser> _searchResults = [];
+  bool _searching = false;
+  final Map<String, FriendshipStatus> _statusCache = {};
+
   @override
   void initState() {
     super.initState();
     _loadProfile();
     _loadActivityData();
     _loadRecords();
+    _loadFriends();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadProfile() async {
@@ -54,6 +71,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) {
       setState(() => _activityData = data);
     }
+  }
+
+  Future<void> _loadFriends() async {
+    final uid = AuthService.currentUser?.id;
+    if (uid == null) return;
+    final friends = await _friendService.getFriends(uid);
+    final incoming = await _friendService.getPendingIncoming();
+    if (mounted) {
+      setState(() {
+        _friends = friends;
+        _pendingIncoming = incoming;
+      });
+    }
+  }
+
+  Future<void> _searchUsers(String query) async {
+    if (query.trim().isEmpty) {
+      setState(() => _searchResults = []);
+      return;
+    }
+    setState(() => _searching = true);
+    final results = await _friendService.searchUsers(query);
+    // Fetch status for each result
+    for (final user in results) {
+      _statusCache[user.id] = await _friendService.getFriendshipStatus(user.id);
+    }
+    if (mounted) setState(() {
+      _searchResults = results;
+      _searching = false;
+    });
+  }
+
+  Future<void> _sendRequest(FriendUser user) async {
+    await _friendService.sendRequest(user.id);
+    setState(() => _statusCache[user.id] = FriendshipStatus.pendingSent);
+  }
+
+  Future<void> _cancelRequest(FriendUser user) async {
+    await _friendService.cancelRequest(user.id);
+    setState(() => _statusCache[user.id] = FriendshipStatus.none);
+  }
+
+  Future<void> _acceptRequest(FriendUser user) async {
+    if (user.requestId == null) return;
+    await _friendService.acceptRequest(user.requestId!);
+    await _loadFriends();
+  }
+
+  Future<void> _declineRequest(FriendUser user) async {
+    if (user.requestId == null) return;
+    await _friendService.declineRequest(user.requestId!);
+    await _loadFriends();
+  }
+
+  Future<void> _unfriend(FriendUser user) async {
+    await _friendService.unfriend(user.id);
+    await _loadFriends();
+    setState(() => _statusCache[user.id] = FriendshipStatus.none);
   }
 
   Future<void> _signOut() async {
@@ -96,6 +171,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(AppSpacing.base, 0, AppSpacing.base, AppSpacing.base),
               child: _PersonalRecords(records: _records, isDark: Theme.of(context).brightness == Brightness.dark),
+            ),
+            // Pending friend requests
+            if (_pendingIncoming.isNotEmpty)
+              _PendingRequestsCard(
+                requests: _pendingIncoming,
+                onAccept: _acceptRequest,
+                onDecline: _declineRequest,
+              ),
+            // Friends & search
+            _FriendsCard(
+              friends: _friends,
+              searchController: _searchController,
+              searchResults: _searchResults,
+              searching: _searching,
+              statusCache: _statusCache,
+              onSearch: _searchUsers,
+              onSendRequest: _sendRequest,
+              onCancelRequest: _cancelRequest,
+              onUnfriend: _unfriend,
             ),
             ListTile(
               leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
@@ -490,3 +584,347 @@ class _RecordTile extends StatelessWidget {
     );
   }
 }
+
+// ─── Pending Requests Card ────────────────────────────────────────────────────
+
+class _PendingRequestsCard extends StatelessWidget {
+  final List<FriendUser> requests;
+  final Future<void> Function(FriendUser) onAccept;
+  final Future<void> Function(FriendUser) onDecline;
+
+  const _PendingRequestsCard({
+    required this.requests,
+    required this.onAccept,
+    required this.onDecline,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppColors.dmCard : AppColors.background;
+    final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
+    final green = isDark ? AppColors.dmPrimary : AppColors.primary;
+    final labelColor = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+    final titleColor = isDark ? AppColors.dmTextPrimary : AppColors.textPrimary;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(AppSpacing.base, 0, AppSpacing.base, AppSpacing.base),
+      padding: const EdgeInsets.all(AppSpacing.base),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: green.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.person_add_outlined, size: 16, color: green),
+              const SizedBox(width: 6),
+              Text(
+                'Friend Requests (${requests.length})',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: labelColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          ...requests.map((req) => Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: green.withValues(alpha: 0.15),
+                  child: Text(
+                    req.username.isNotEmpty ? req.username[0].toUpperCase() : '?',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: green),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(req.username,
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: titleColor)),
+                ),
+                TextButton(
+                  onPressed: () => onDecline(req),
+                  style: TextButton.styleFrom(
+                    foregroundColor: labelColor,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text('Decline'),
+                ),
+                const SizedBox(width: 4),
+                FilledButton(
+                  onPressed: () => onAccept(req),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: green,
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  child: const Text('Accept'),
+                ),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Friends Card ─────────────────────────────────────────────────────────────
+
+class _FriendsCard extends StatelessWidget {
+  final List<FriendUser> friends;
+  final TextEditingController searchController;
+  final List<FriendUser> searchResults;
+  final bool searching;
+  final Map<String, FriendshipStatus> statusCache;
+  final Future<void> Function(String) onSearch;
+  final Future<void> Function(FriendUser) onSendRequest;
+  final Future<void> Function(FriendUser) onCancelRequest;
+  final Future<void> Function(FriendUser) onUnfriend;
+
+  const _FriendsCard({
+    required this.friends,
+    required this.searchController,
+    required this.searchResults,
+    required this.searching,
+    required this.statusCache,
+    required this.onSearch,
+    required this.onSendRequest,
+    required this.onCancelRequest,
+    required this.onUnfriend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppColors.dmCard : AppColors.background;
+    final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
+    final green = isDark ? AppColors.dmPrimary : AppColors.primary;
+    final labelColor = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+    final titleColor = isDark ? AppColors.dmTextPrimary : AppColors.textPrimary;
+    final inputBg = isDark ? AppColors.dmSecondaryBackground : AppColors.secondaryBackground;
+
+    final showSearch = searchController.text.isNotEmpty;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(AppSpacing.base, 0, AppSpacing.base, AppSpacing.base),
+      padding: const EdgeInsets.all(AppSpacing.base),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Friends${friends.isNotEmpty ? " (${friends.length})" : ""}',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: labelColor),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          // Search field
+          TextField(
+            controller: searchController,
+            onChanged: onSearch,
+            decoration: InputDecoration(
+              hintText: 'Search people by username…',
+              hintStyle: TextStyle(fontSize: 13, color: labelColor),
+              filled: true,
+              fillColor: inputBg,
+              prefixIcon: Icon(Icons.search, size: 18, color: labelColor),
+              suffixIcon: searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: Icon(Icons.clear, size: 18, color: labelColor),
+                      onPressed: () {
+                        searchController.clear();
+                        onSearch('');
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                borderSide: BorderSide(color: borderColor),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                borderSide: BorderSide(color: green),
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (showSearch) ...[
+            if (searching)
+              const Center(child: Padding(
+                padding: EdgeInsets.all(AppSpacing.base),
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ))
+            else if (searchResults.isEmpty)
+              Center(child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.base),
+                child: Text('No users found', style: TextStyle(color: labelColor, fontSize: 13)),
+              ))
+            else
+              ...searchResults.map((user) {
+                final status = statusCache[user.id] ?? FriendshipStatus.none;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: green.withValues(alpha: 0.15),
+                        child: Text(
+                          user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: green),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(user.username,
+                              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: titleColor)),
+                            Text('${user.totalPoints} pts',
+                              style: TextStyle(fontSize: 11, color: labelColor)),
+                          ],
+                        ),
+                      ),
+                      _FriendActionButton(
+                        status: status,
+                        onSend: () => onSendRequest(user),
+                        onCancel: () => onCancelRequest(user),
+                        onUnfriend: () => onUnfriend(user),
+                        green: green,
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
+                );
+              }),
+          ] else ...[
+            // Friends list
+            if (friends.isEmpty)
+              Center(child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.base),
+                child: Text('No friends yet. Search above to find people!',
+                  style: TextStyle(color: labelColor, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ))
+            else
+              ...friends.map((friend) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: green.withValues(alpha: 0.15),
+                      child: Text(
+                        friend.username.isNotEmpty ? friend.username[0].toUpperCase() : '?',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: green),
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(friend.username,
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: titleColor)),
+                          Text('${friend.totalPoints} pts',
+                            style: TextStyle(fontSize: 11, color: labelColor)),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => onUnfriend(friend),
+                      style: TextButton.styleFrom(
+                        foregroundColor: labelColor,
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      child: const Text('Unfriend'),
+                    ),
+                  ],
+                ),
+              )),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _FriendActionButton extends StatelessWidget {
+  final FriendshipStatus status;
+  final VoidCallback onSend;
+  final VoidCallback onCancel;
+  final VoidCallback onUnfriend;
+  final Color green;
+  final bool isDark;
+
+  const _FriendActionButton({
+    required this.status,
+    required this.onSend,
+    required this.onCancel,
+    required this.onUnfriend,
+    required this.green,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    switch (status) {
+      case FriendshipStatus.friends:
+        return TextButton(
+          onPressed: onUnfriend,
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.categoryFood,
+            visualDensity: VisualDensity.compact,
+          ),
+          child: const Text('Unfriend'),
+        );
+      case FriendshipStatus.pendingSent:
+        return TextButton(
+          onPressed: onCancel,
+          style: TextButton.styleFrom(
+            foregroundColor: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
+            visualDensity: VisualDensity.compact,
+          ),
+          child: const Text('Pending…'),
+        );
+      case FriendshipStatus.pendingReceived:
+        return FilledButton(
+          onPressed: onSend, // will trigger the respond flow from the parent
+          style: FilledButton.styleFrom(
+            backgroundColor: green,
+            visualDensity: VisualDensity.compact,
+          ),
+          child: const Text('Respond'),
+        );
+      case FriendshipStatus.none:
+      default:
+        return FilledButton(
+          onPressed: onSend,
+          style: FilledButton.styleFrom(
+            backgroundColor: green,
+            visualDensity: VisualDensity.compact,
+          ),
+          child: const Text('Add'),
+        );
+    }
+  }
+}
+
