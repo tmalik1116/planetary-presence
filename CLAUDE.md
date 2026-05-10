@@ -84,6 +84,7 @@ Central `+` button = primary action (record/complete quest). Visually distinct f
 | Backend | Supabase | ✅ `supabase_flutter ^2.8.4` |
 | Auth | Supabase Auth + google_sign_in ^6.2.2 | ✅ |
 | Database | Supabase Postgres + PostGIS | ✅ migration SQL ready |
+| Location | `geolocator ^13.0.2` | ✅ |
 | State mgmt | TBD | pending decision |
 
 ---
@@ -140,3 +141,4 @@ lib/
 | 2026-05-10 | Light mode + Settings screen with theme toggle | subagent |
 | 2026-05-10 | Auth: email/password + Google OAuth, onboarding (username + home city) | subagent |
 | 2026-05-10 | Design system: AppTheme, AppColors, AppSpacing, redesigned nav + cards | subagent |
+| 2026-05-10 | GPS location service, user coordinates update on login | subagent |

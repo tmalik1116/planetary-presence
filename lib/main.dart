@@ -14,11 +14,11 @@ Future<void> main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
-  runApp(const Planetary PresenceApp());
+  runApp(const PlanetaryPresenceApp());
 }
 
-class Planetary PresenceApp extends StatelessWidget {
-  const Planetary PresenceApp({super.key});
+class PlanetaryPresenceApp extends StatelessWidget {
+  const PlanetaryPresenceApp({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
 import '../services/supabase_service.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/onboarding_screen.dart';
@@ -24,10 +25,28 @@ class AuthGate extends StatelessWidget {
                 body: Center(child: CircularProgressIndicator()),
               );
             }
-            return snap.data! ? const MainShell() : const OnboardingScreen();
+            return snap.data! ? const _AppStartup() : const OnboardingScreen();
           },
         );
       },
     );
   }
+}
+
+class _AppStartup extends StatefulWidget {
+  const _AppStartup();
+
+  @override
+  State<_AppStartup> createState() => _AppStartupState();
+}
+
+class _AppStartupState extends State<_AppStartup> {
+  @override
+  void initState() {
+    super.initState();
+    LocationService.updateUserCoordinates();
+  }
+
+  @override
+  Widget build(BuildContext context) => const MainShell();
 }

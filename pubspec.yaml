@@ -38,6 +38,7 @@ dependencies:
   google_sign_in: ^6.2.2
   logger: ^2.5.0
   path_provider: ^2.1.5
+  geolocator: ^13.0.2
 
 dev_dependencies:
   flutter_test:
