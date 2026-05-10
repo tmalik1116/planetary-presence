@@ -176,31 +176,7 @@ class QuestService {
         'vote': vote,
       });
 
-      final upVotes = await SupabaseService.client
-          .from('quest_votes')
-          .select()
-          .eq('quest_id', questId)
-          .eq('vote', 'up');
-
-      final downVotes = await SupabaseService.client
-          .from('quest_votes')
-          .select()
-          .eq('quest_id', questId)
-          .eq('vote', 'down');
-
-      final netVotes = upVotes.length - downVotes.length;
-
-      final updatePayload = <String, dynamic>{'net_votes': netVotes};
-      if (netVotes >= 100) {
-        updatePayload['status'] = 'active';
-      }
-
-      await SupabaseService.client
-          .from('quests')
-          .update(updatePayload)
-          .eq('id', questId);
-
-      AppLogger.i('Vote recorded for quest: $questId ($vote, net: $netVotes)');
+      AppLogger.i('Vote recorded for quest: $questId ($vote)');
     } catch (e, st) {
       AppLogger.e('Failed to vote on quest: $questId', error: e, stackTrace: st);
       rethrow;
