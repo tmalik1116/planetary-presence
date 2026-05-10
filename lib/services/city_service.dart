@@ -18,14 +18,17 @@ class CityData {
     required this.lng,
   });
 
-  factory CityData.fromMap(Map<String, dynamic> map) {
+  static CityData? tryFromMap(Map<String, dynamic> map) {
+    final latRaw = map['lat'];
+    final lngRaw = map['lng'];
+    if (latRaw == null || lngRaw == null) return null;
     return CityData(
       id: map['id'] as String,
       name: map['name'] as String,
       country: map['country'] as String,
       state: map['state'] as String?,
-      lat: (map['lat'] as num).toDouble(),
-      lng: (map['lng'] as num).toDouble(),
+      lat: (latRaw as num).toDouble(),
+      lng: (lngRaw as num).toDouble(),
     );
   }
 }
@@ -39,7 +42,8 @@ class CityService {
           .select('id, name, country, state, lat, lng');
 
       final cities = (response as List<dynamic>)
-          .map((row) => CityData.fromMap(row as Map<String, dynamic>))
+          .map((row) => CityData.tryFromMap(row as Map<String, dynamic>))
+          .whereType<CityData>()
           .toList();
 
       AppLogger.i('CityService: loaded ${cities.length} cities');
