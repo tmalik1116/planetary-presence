@@ -5,6 +5,7 @@ import '../screens/quests_screen.dart';
 import '../screens/record_screen.dart';
 import '../screens/stats_screen.dart';
 import '../screens/profile_screen.dart';
+import '../screens/record/record_step1_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -25,6 +26,11 @@ class _MainShellState extends State<MainShell> {
   ];
 
   void _onTap(int index) {
+    if (index == 2) {
+      // Open the Record sheet without switching tabs
+      showRecordStep1Sheet(context);
+      return;
+    }
     setState(() => _currentIndex = index);
   }
 
