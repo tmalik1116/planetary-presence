@@ -76,23 +76,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _ProfileHeader(profile: _profile, loading: _loading),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.base),
-            child: _ActivityGraph(activityData: _activityData),
-          ),
-          const Spacer(),
-          ListTile(
-            leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-            title: Text(
-              'Sign Out',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _ProfileHeader(profile: _profile, loading: _loading),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.base),
+              child: _ActivityGraph(activityData: _activityData),
             ),
-            onTap: _signOut,
-          ),
-        ],
+            ListTile(
+              leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+              title: Text(
+                'Sign Out',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              onTap: _signOut,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -285,8 +286,7 @@ class _ActivityGraph extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final availableWidth = constraints.maxWidth - labelWidth;
-              final cellSize = (availableWidth - (6 * gap)) / 7;
+              const double cellSize = 14.0;
 
               return Column(
                 children: List.generate(weeks.length, (weekIndex) {
@@ -325,25 +325,28 @@ class _ActivityGraph extends StatelessWidget {
                                 )
                               : null,
                         ),
-                        ...List.generate(7, (di) {
-                          final day = week[di];
-                          final margin = di < 6 ? gap : 0.0;
-                          if (day == null) {
-                            return SizedBox(width: cellSize + margin, height: cellSize);
-                          }
-                          final key =
-                              '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-                          final count = activityData[key] ?? 0;
-                          return Container(
-                            width: cellSize,
-                            height: cellSize,
-                            margin: EdgeInsets.only(right: margin),
-                            decoration: BoxDecoration(
-                              color: _cellColor(count, isDark),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          );
-                        }),
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: List.generate(7, (di) {
+                              final day = week[di];
+                              if (day == null) {
+                                return const SizedBox(width: 14, height: 14);
+                              }
+                              final key =
+                                  '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+                              final count = activityData[key] ?? 0;
+                              return Container(
+                                width: 14,
+                                height: 14,
+                                decoration: BoxDecoration(
+                                  color: _cellColor(count, isDark),
+                                  borderRadius: BorderRadius.circular(3),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
                       ],
                     ),
                   );
