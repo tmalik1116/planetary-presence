@@ -33,7 +33,7 @@ class AppLogger {
 
   static Future<void> init() async {
     final dir = await getApplicationDocumentsDirectory();
-    _logFilePath = '${dir.path}/trailblazer_logs.txt';
+    _logFilePath = '${dir.path}/planetary_presence_logs.txt';
 
     _logger = Logger(
       printer: PrettyPrinter(

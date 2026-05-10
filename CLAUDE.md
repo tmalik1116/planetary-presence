@@ -1,4 +1,4 @@
-# Trailblazer — Agent Guide
+# Planetary Presence — Agent Guide
 
 ## Project
 

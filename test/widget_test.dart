@@ -3,7 +3,7 @@ import 'package:app/main.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const TrailblazerApp());
+    await tester.pumpWidget(const Planetary PresenceApp());
     expect(find.text('Map'), findsOneWidget);
   });
 }

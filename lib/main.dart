@@ -14,11 +14,11 @@ Future<void> main() async {
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
-  runApp(const TrailblazerApp());
+  runApp(const Planetary PresenceApp());
 }
 
-class TrailblazerApp extends StatelessWidget {
-  const TrailblazerApp({super.key});
+class Planetary PresenceApp extends StatelessWidget {
+  const Planetary PresenceApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,7 @@ class TrailblazerApp extends StatelessWidget {
       valueListenable: themeModeNotifier,
       builder: (context, themeMode, _) {
         return MaterialApp(
-          title: 'Trailblazer',
+          title: 'Planetary Presence',
           debugShowCheckedModeBanner: false,
           themeMode: themeMode,
           theme: AppTheme.light,
