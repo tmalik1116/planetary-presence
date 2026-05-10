@@ -52,6 +52,7 @@ gh issue edit <number> --add-assignee m-GDEV --repo tmalik1116/planetary-presenc
 - Widgets in `lib/screens/` or `lib/widgets/` as appropriate.
 - State management TBD — await direction from user before choosing.
 - Keep files focused. Split large widgets.
+- All UI changes must reference design.md for colors, spacing, typography, and component style.
 
 ---
 
@@ -162,3 +163,4 @@ lib/
 | 2026-05-10 | Map screen: flutter_map integration, OSM tiles, placeholder city markers | subagent |
 | 2026-05-10 | Onboarding city autocomplete with Supabase search | subagent |
 | 2026-05-10 | CityService + CityData model; map screen loads city pins from Supabase (#12) | subagent |
+| 2026-05-10 | Profile header: ProfileService, username/points/join date/home city display (#26) | subagent |
