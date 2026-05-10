@@ -6,6 +6,7 @@ import '../models/quest.dart';
 import '../services/city_service.dart';
 import '../services/quest_service.dart';
 import '../widgets/quest_card.dart';
+import 'quest_detail_screen.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -25,6 +26,7 @@ class _MapScreenState extends State<MapScreen>
   List<CityData> _cities = [];
   bool _loading = true;
   CityData? _selectedCity;
+  List<Quest> _cityQuests = [];
 
   late final AnimationController _panelController;
   late final Animation<Offset> _panelSlide;
@@ -44,6 +46,19 @@ class _MapScreenState extends State<MapScreen>
       curve: Curves.easeOutCubic,
     ));
     _loadCities();
+  }
+
+  Future<void> _loadCityQuests(String cityId) async {
+    try {
+      final quests = await QuestService().getActiveQuests(cityId: cityId);
+      if (mounted) {
+        setState(() {
+          _cityQuests = quests.where((q) => q.lat != null && q.lng != null).toList();
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _cityQuests = []);
+    }
   }
 
   Future<void> _loadCities() async {
@@ -86,13 +101,20 @@ class _MapScreenState extends State<MapScreen>
   }
 
   void _selectCity(CityData city) {
-    setState(() => _selectedCity = city);
+    setState(() {
+      _selectedCity = city;
+      _cityQuests = [];
+    });
     _panelController.forward();
+    _loadCityQuests(city.id);
   }
 
   void _dismissCity() {
     _panelController.reverse().then((_) {
-      if (mounted) setState(() => _selectedCity = null);
+      if (mounted) setState(() {
+        _selectedCity = null;
+        _cityQuests = [];
+      });
     });
   }
 
@@ -113,12 +135,31 @@ class _MapScreenState extends State<MapScreen>
                 height: mapHeight,
                 child: Stack(
                   children: [
+                    Positioned.fill(
+                      child: ColoredBox(
+                        color: isDark ? Colors.black : Colors.white,
+                      ),
+                    ),
                     FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
                         initialCenter: _initialCenter,
                         initialZoom: _initialZoom,
+                        minZoom: 2.5,
+                        cameraConstraint: CameraConstraint.containCenter(
+                          bounds: LatLngBounds(
+                            const LatLng(-85.0, -179.9),
+                            const LatLng(85.0, 179.9),
+                          ),
+                        ),
                         onTap: (_, __) => _dismissCity(),
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.drag |
+                              InteractiveFlag.pinchZoom |
+                              InteractiveFlag.doubleTapZoom |
+                              InteractiveFlag.scrollWheelZoom |
+                              InteractiveFlag.flingAnimation,
+                        ),
                       ),
                       children: [
                         TileLayer(
@@ -146,6 +187,24 @@ class _MapScreenState extends State<MapScreen>
                                 ),
                               )
                               .toList(),
+                        ),
+                        MarkerLayer(
+                          markers: _cityQuests.map((quest) => Marker(
+                            point: LatLng(quest.lat!, quest.lng!),
+                            width: 28,
+                            height: 28,
+                            child: GestureDetector(
+                              onTap: () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => QuestDetailScreen(quest: quest),
+                                ),
+                              ),
+                              child: _QuestPin(
+                                category: quest.category,
+                                isDark: isDark,
+                              ),
+                            ),
+                          )).toList(),
                         ),
                       ],
                     ),
@@ -404,6 +463,56 @@ class _PanelHeader extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Quest pin marker
+// ---------------------------------------------------------------------------
+
+class _QuestPin extends StatelessWidget {
+  const _QuestPin({required this.category, required this.isDark});
+
+  final QuestCategory category;
+  final bool isDark;
+
+  IconData get _icon {
+    switch (category) {
+      case QuestCategory.nature:
+        return Icons.eco;
+      case QuestCategory.culture:
+        return Icons.museum;
+      case QuestCategory.food:
+        return Icons.restaurant;
+      case QuestCategory.landmark:
+        return Icons.star;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = AppColors.categoryColor(category.value, darkMode: isDark);
+    return Container(
+      width: 24,
+      height: 24,
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.9),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x44000000),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Icon(_icon, size: 13, color: Colors.white),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Split-view quest list
+// ---------------------------------------------------------------------------
 
 class _QuestList extends StatelessWidget {
   const _QuestList({required this.cityId, required this.cityName});

@@ -124,6 +124,69 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Section D — Vote buttons (pending quests only)
+            if (_quest.status == QuestStatus.pending) ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.base),
+                decoration: BoxDecoration(
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(color: const Color(0xFFF59E0B), width: 1.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Community Vote',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: secondaryColor,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'Vote to help this quest get approved. Quests reaching 100 net votes become active.',
+                      style: TextStyle(fontSize: 13, color: secondaryColor),
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    Row(
+                      children: [
+                        _VotePill(
+                          icon: Icons.thumb_up_outlined,
+                          label: 'Upvote',
+                          onTap: () => _vote('up'),
+                          color: AppColors.categoryNature,
+                          borderColor: borderColor,
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm),
+                          child: Text(
+                            '${_quest.netVotes}',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: secondaryColor,
+                            ),
+                          ),
+                        ),
+                        _VotePill(
+                          icon: Icons.thumb_down_outlined,
+                          label: 'Downvote',
+                          onTap: () => _vote('down'),
+                          color: AppColors.categoryFood,
+                          borderColor: borderColor,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppSpacing.base),
+            ],
+
             // Section A — Hero header
             Container(
               width: double.infinity,
@@ -293,69 +356,6 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                 ],
               ),
             ),
-
-            // Section D — Vote buttons (pending quests only)
-            if (_quest.status == QuestStatus.pending) ...[
-              const SizedBox(height: AppSpacing.base),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(AppSpacing.base),
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(AppRadius.card),
-                  border: Border.all(color: borderColor),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Community Vote',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: secondaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      'Vote to help this quest get approved. Quests reaching 100 net votes become active.',
-                      style: TextStyle(fontSize: 13, color: secondaryColor),
-                    ),
-                    const SizedBox(height: AppSpacing.md),
-                    Row(
-                      children: [
-                        _VotePill(
-                          icon: Icons.thumb_up_outlined,
-                          label: 'Upvote',
-                          onTap: () => _vote('up'),
-                          color: AppColors.categoryNature,
-                          borderColor: borderColor,
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.sm),
-                          child: Text(
-                            '${_quest.netVotes}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: secondaryColor,
-                            ),
-                          ),
-                        ),
-                        _VotePill(
-                          icon: Icons.thumb_down_outlined,
-                          label: 'Downvote',
-                          onTap: () => _vote('down'),
-                          color: AppColors.categoryFood,
-                          borderColor: borderColor,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
 
             const SizedBox(height: AppSpacing.lg),
           ],

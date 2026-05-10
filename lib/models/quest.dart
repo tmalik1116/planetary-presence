@@ -68,6 +68,8 @@ class Quest {
   final double avgDifficultyRating;
   final int ratingCount;
   final int netVotes;
+  final double? lat;
+  final double? lng;
 
   const Quest({
     required this.id,
@@ -83,6 +85,8 @@ class Quest {
     required this.avgDifficultyRating,
     required this.ratingCount,
     required this.netVotes,
+    this.lat,
+    this.lng,
   });
 
   factory Quest.fromJson(Map<String, dynamic> json) {
@@ -100,6 +104,8 @@ class Quest {
       avgDifficultyRating: (json['avg_difficulty_rating'] as num).toDouble(),
       ratingCount: json['rating_count'] as int,
       netVotes: json['net_votes'] as int,
+      lat: (json['lat'] as num?)?.toDouble(),
+      lng: (json['lng'] as num?)?.toDouble(),
     );
   }
 
@@ -118,6 +124,8 @@ class Quest {
       'avg_difficulty_rating': avgDifficultyRating,
       'rating_count': ratingCount,
       'net_votes': netVotes,
+      'lat': lat,
+      'lng': lng,
     };
   }
 }

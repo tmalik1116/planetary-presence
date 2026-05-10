@@ -68,7 +68,7 @@ class StatsService {
         // Fetch all users with their city's country, then filter client-side.
         final rows = await _client
             .from('users')
-            .select('id, username, total_points, cities!home_city_id(country)')
+            .select('id, username, total_points, cities!users_home_city_id_fkey(country)')
             .order('total_points', ascending: false)
             .limit(500);
         final filtered = (rows as List).where((r) {

@@ -164,6 +164,49 @@ class QuestService {
     }
   }
 
+  Future<String?> getUserVote(String questId, String userId) async {
+    try {
+      final data = await SupabaseService.client
+          .from('quest_votes')
+          .select('vote')
+          .eq('quest_id', questId)
+          .eq('user_id', userId)
+          .maybeSingle();
+      return data?['vote'] as String?;
+    } catch (e, st) {
+      AppLogger.e('Failed to get user vote', error: e, stackTrace: st);
+      return null;
+    }
+  }
+
+  Future<void> removeVote(String questId, String userId) async {
+    try {
+      await SupabaseService.client
+          .from('quest_votes')
+          .delete()
+          .eq('quest_id', questId)
+          .eq('user_id', userId);
+      final upVotes = await SupabaseService.client
+          .from('quest_votes')
+          .select()
+          .eq('quest_id', questId)
+          .eq('vote', 'up');
+      final downVotes = await SupabaseService.client
+          .from('quest_votes')
+          .select()
+          .eq('quest_id', questId)
+          .eq('vote', 'down');
+      await SupabaseService.client
+          .from('quests')
+          .update({'net_votes': upVotes.length - downVotes.length})
+          .eq('id', questId);
+      AppLogger.i('Vote removed for quest: $questId');
+    } catch (e, st) {
+      AppLogger.e('Failed to remove vote', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
   Future<void> voteQuest(
     String questId,
     String userId,

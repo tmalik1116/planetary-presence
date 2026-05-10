@@ -15,12 +15,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ProfileData? _profile;
   bool _loading = true;
   Map<String, int> _activityData = {};
+  PersonalRecords _records = const PersonalRecords(bestDayQuests: 0, bestDayPoints: 0);
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
     _loadActivityData();
+    _loadRecords();
   }
 
   Future<void> _loadProfile() async {
@@ -36,6 +38,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _loadRecords() async {
+    final user = AuthService.currentUser;
+    if (user == null) return;
+    final records = await ProfileService().getPersonalRecords(user.id);
+    if (mounted) setState(() => _records = records);
   }
 
   Future<void> _loadActivityData() async {
@@ -76,23 +85,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          _ProfileHeader(profile: _profile, loading: _loading),
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.base),
-            child: _ActivityGraph(activityData: _activityData),
-          ),
-          const Spacer(),
-          ListTile(
-            leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
-            title: Text(
-              'Sign Out',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            _ProfileHeader(profile: _profile, loading: _loading),
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.base),
+              child: _ActivityGraph(activityData: _activityData),
             ),
-            onTap: _signOut,
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.base, 0, AppSpacing.base, AppSpacing.base),
+              child: _PersonalRecords(records: _records, isDark: Theme.of(context).brightness == Brightness.dark),
+            ),
+            ListTile(
+              leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+              title: Text(
+                'Sign Out',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              onTap: _signOut,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -237,102 +251,242 @@ class _ActivityGraph extends StatelessWidget {
 
   const _ActivityGraph({required this.activityData});
 
-  static const _dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-  Color _cellColor(int count, bool isDark) {
-    if (count == 0) {
-      return isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
-    } else if (count == 1) {
-      return AppColors.primary.withValues(alpha: 0.3);
-    } else if (count == 2) {
-      return AppColors.primary.withValues(alpha: 0.6);
-    } else {
-      return AppColors.primary;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    // Build 49-day grid: 7 weeks (columns) × 7 days (rows, Mon=0..Sun=6)
-    // Start from the Monday of the week 7 weeks ago
     final now = DateTime.now();
-    // Find the most recent Sunday as end anchor
-    // We want 49 cells total: columns = weeks (oldest left), rows = Mon..Sun
-    // Calculate the start date: 48 days before today, adjusted to Monday
-    final todayWeekday = now.weekday; // 1=Mon..7=Sun
-    // Align so the last column ends with the current week (including today)
-    final daysFromMonday = todayWeekday - 1;
-    final weekStart = now.subtract(Duration(days: daysFromMonday));
-    final gridStart = weekStart.subtract(const Duration(days: 42)); // 6 full weeks back
+    final startOfYear = DateTime(now.year, 1, 1);
+    // Pad to start on Monday
+    final startDay = startOfYear.subtract(
+      Duration(days: (startOfYear.weekday - 1) % 7),
+    );
+
+    final List<List<DateTime?>> weeks = [];
+    var current = startDay;
+    while (!current.isAfter(now)) {
+      final week = <DateTime?>[];
+      for (int d = 0; d < 7; d++) {
+        final day = current.add(Duration(days: d));
+        week.add(day.isAfter(now) || day.isBefore(startOfYear) ? null : day);
+      }
+      weeks.add(week);
+      current = current.add(const Duration(days: 7));
+    }
+
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    const labelWidth = 28.0;
+    const gap = 3.0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Activity',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+          child: Text(
+            'Activity',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Day labels column
-            Column(
-              children: List.generate(7, (dayIndex) {
-                return SizedBox(
-                  height: 16,
-                  child: Text(
-                    _dayLabels[dayIndex],
-                    style: const TextStyle(
-                      fontSize: 8,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            // 7 columns (weeks)
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: List.generate(7, (weekIndex) {
-                  return Column(
-                    children: List.generate(7, (dayIndex) {
-                      final cellDate = gridStart.add(
-                        Duration(days: weekIndex * 7 + dayIndex),
-                      );
-                      // Don't render future days
-                      final isFuture = cellDate.isAfter(now);
-                      final key =
-                          '${cellDate.year}-${cellDate.month.toString().padLeft(2, '0')}-${cellDate.day.toString().padLeft(2, '0')}';
-                      final count = isFuture ? 0 : (activityData[key] ?? 0);
-                      return Container(
-                        width: 12,
-                        height: 12,
-                        margin: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: isFuture
-                              ? Colors.transparent
-                              : _cellColor(count, isDark),
-                          borderRadius: BorderRadius.circular(3),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              const double gap = 1.0;
+              final cellSize = (constraints.maxWidth - labelWidth - (6 * gap)) / 7;
+
+              return Column(
+                children: List.generate(weeks.length, (weekIndex) {
+                  final week = weeks[weekIndex];
+                  final firstReal = week.firstWhere(
+                    (d) => d != null,
+                    orElse: () => null,
+                  );
+                  String? monthLabel;
+                  if (firstReal != null) {
+                    final hasFirstOfMonth = week.any((d) => d != null && d.day == 1);
+                    if (weekIndex == 0 || hasFirstOfMonth) {
+                      final labelDay = hasFirstOfMonth
+                          ? week.firstWhere((d) => d != null && d.day == 1)!
+                          : firstReal;
+                      monthLabel = monthNames[labelDay.month - 1];
+                    }
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: gap),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: labelWidth,
+                          child: monthLabel != null
+                              ? Text(
+                                  monthLabel,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: isDark
+                                        ? AppColors.dmTextSecondary
+                                        : AppColors.textSecondary,
+                                  ),
+                                )
+                              : null,
                         ),
-                      );
-                    }),
+                        Row(
+                          children: List.generate(7, (di) {
+                            final day = week[di];
+                            if (day == null) {
+                              return SizedBox(
+                                width: cellSize + (di < 6 ? gap : 0),
+                                height: cellSize,
+                              );
+                            }
+                            final key =
+                                '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+                            final count = activityData[key] ?? 0;
+                            return Container(
+                              width: cellSize,
+                              height: cellSize,
+                              margin: EdgeInsets.only(right: di < 6 ? gap : 0.0),
+                              decoration: BoxDecoration(
+                                color: _cellColor(count, isDark),
+                                borderRadius: BorderRadius.circular(3),
+                              ),
+                            );
+                          }),
+                        ),
+                      ],
+                    ),
                   );
                 }),
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
       ],
+    );
+  }
+
+  Color _cellColor(int count, bool isDark) {
+    if (count == 0) return isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
+    if (count == 1) return AppColors.primary.withValues(alpha: 0.35);
+    if (count == 2) return AppColors.primary.withValues(alpha: 0.6);
+    return AppColors.primary;
+  }
+}
+
+class _PersonalRecords extends StatelessWidget {
+  final PersonalRecords records;
+  final bool isDark;
+
+  const _PersonalRecords({required this.records, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? AppColors.dmCard : AppColors.background;
+    final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
+    final labelColor = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.base),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Personal Records',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: labelColor,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _RecordTile(
+                  icon: Icons.emoji_events_outlined,
+                  label: 'Best Day (Quests)',
+                  value: records.bestDayQuests == 0 ? '—' : '${records.bestDayQuests}',
+                  isDark: isDark,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _RecordTile(
+                  icon: Icons.stars_outlined,
+                  label: 'Best Day (Points)',
+                  value: records.bestDayPoints == 0 ? '—' : '${records.bestDayPoints} pts',
+                  isDark: isDark,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecordTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool isDark;
+
+  const _RecordTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? AppColors.dmSecondaryBackground : AppColors.secondaryBackground;
+    final labelColor = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+    final valueColor = isDark ? AppColors.dmTextPrimary : AppColors.textPrimary;
+    final green = isDark ? AppColors.dmPrimary : AppColors.primary;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: green),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: valueColor,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: labelColor),
+          ),
+        ],
+      ),
     );
   }
 }
