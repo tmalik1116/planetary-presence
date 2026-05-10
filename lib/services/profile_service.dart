@@ -31,7 +31,7 @@ class ProfileService {
     try {
       final data = await _client
           .from('users')
-          .select('username, email, total_points, joined_at, home_city_id, avatar_url, cities(name, country)')
+          .select('username, email, total_points, joined_at, home_city_id, avatar_url')
           .eq('id', userId)
           .maybeSingle();
 
@@ -40,15 +40,28 @@ class ProfileService {
         return null;
       }
 
-      final cityMap = data['cities'] as Map?;
+      String? homeCityName;
+      String? homeCityCountry;
+      final homeCityId = data['home_city_id'] as String?;
+
+      if (homeCityId != null) {
+        final cityData = await _client
+            .from('cities')
+            .select('name, country')
+            .eq('id', homeCityId)
+            .maybeSingle();
+        homeCityName = cityData?['name'] as String?;
+        homeCityCountry = cityData?['country'] as String?;
+      }
+
       return ProfileData(
         username: data['username'] as String? ?? '',
         email: data['email'] as String? ?? '',
         totalPoints: data['total_points'] as int? ?? 0,
         joinedAt: DateTime.parse(data['joined_at'] as String),
-        homeCityName: cityMap?['name'] as String?,
-        homeCityId: data['home_city_id'] as String?,
-        homeCityCountry: cityMap?['country'] as String?,
+        homeCityName: homeCityName,
+        homeCityId: homeCityId,
+        homeCityCountry: homeCityCountry,
         avatarUrl: data['avatar_url'] as String?,
       );
     } catch (e, st) {
