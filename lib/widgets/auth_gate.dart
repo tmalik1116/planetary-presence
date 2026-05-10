@@ -7,8 +7,23 @@ import '../screens/auth/login_screen.dart';
 import '../screens/auth/onboarding_screen.dart';
 import 'bottom_nav.dart';
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
+
+  @override
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool? _hasProfile;
+  String? _lastUserId;
+
+  Future<void> _checkProfile(String userId) async {
+    if (userId == _lastUserId) return;
+    _lastUserId = userId;
+    final result = await AuthService.hasProfile();
+    if (mounted) setState(() => _hasProfile = result);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,18 +31,21 @@ class AuthGate extends StatelessWidget {
       stream: SupabaseService.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         final session = snapshot.data?.session;
-        if (session == null) return const LoginScreen();
-        return FutureBuilder<bool>(
-          future: AuthService.hasProfile(),
-          builder: (context, snap) {
-            if (!snap.hasData) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
-            }
-            return snap.data! ? const _AppStartup() : const OnboardingScreen();
-          },
-        );
+        if (session == null) {
+          _hasProfile = null;
+          _lastUserId = null;
+          return const LoginScreen();
+        }
+
+        _checkProfile(session.user.id);
+
+        if (_hasProfile == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        return _hasProfile! ? const _AppStartup() : const OnboardingScreen();
       },
     );
   }
