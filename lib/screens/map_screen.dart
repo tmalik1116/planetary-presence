@@ -135,12 +135,18 @@ class _MapScreenState extends State<MapScreen>
                 height: mapHeight,
                 child: Stack(
                   children: [
-                    FlutterMap(
+                    ColoredBox(
+                      color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFE8E0D8),
+                      child: FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
                         initialCenter: _initialCenter,
                         initialZoom: _initialZoom,
+                        minZoom: 2.0,
                         onTap: (_, __) => _dismissCity(),
+                        interactionOptions: const InteractionOptions(
+                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                        ),
                       ),
                       children: [
                         TileLayer(
@@ -188,6 +194,7 @@ class _MapScreenState extends State<MapScreen>
                           )).toList(),
                         ),
                       ],
+                    ),
                     ),
                     if (_loading)
                       const Center(child: CircularProgressIndicator()),
