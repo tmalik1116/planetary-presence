@@ -77,9 +77,7 @@ class _QuestCardState extends State<QuestCard> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? AppColors.dmCard : AppColors.background;
-    final borderColor = widget.quest.status == QuestStatus.pending
-        ? const Color(0xFFF59E0B)
-        : (isDark ? AppColors.dmBorder : AppColors.cardBorder);
+    final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
     final categoryColor =
         AppColors.categoryColor(widget.quest.category.value, darkMode: isDark);
     final titleColor =
@@ -108,16 +106,6 @@ class _QuestCardState extends State<QuestCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (widget.quest.status == QuestStatus.pending) ...[
-              _VoteRow(
-                netVotes: widget.quest.netVotes,
-                onUpvote: () => _vote(context, 'up'),
-                onDownvote: () => _vote(context, 'down'),
-                isDark: isDark,
-                userVote: _userVote,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -156,6 +144,16 @@ class _QuestCardState extends State<QuestCard> {
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
+              ),
+            ],
+            if (widget.quest.status == QuestStatus.pending) ...[
+              const SizedBox(height: AppSpacing.md),
+              _VoteRow(
+                netVotes: widget.quest.netVotes,
+                onUpvote: () => _vote(context, 'up'),
+                onDownvote: () => _vote(context, 'down'),
+                isDark: isDark,
+                userVote: _userVote,
               ),
             ],
           ],
