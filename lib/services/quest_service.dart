@@ -37,7 +37,7 @@ class QuestService {
     try {
       var query = SupabaseService.client
           .from('quests')
-          .select()
+          .select('*, cities(name)')
           .eq('status', 'active');
 
       if (cityId != null) {

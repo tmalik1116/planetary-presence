@@ -56,25 +56,32 @@ class CityService {
   }
 
   Future<CityData?> getNearestCity(double lat, double lng) async {
+    final sw = Stopwatch()..start();
+
     final cities = await getCities();
+    AppLogger.i('CityService: getCities took ${sw.elapsedMilliseconds}ms (${cities.length} cities)');
+
     if (cities.isEmpty) return null;
 
+    final searchStart = sw.elapsedMilliseconds;
     CityData? nearest;
     double minDistance = double.infinity;
 
     for (final city in cities) {
-      final distance = _haversine(lat, lng, city.lat, city.lng);
+      final distance = haversineMeters(lat, lng, city.lat, city.lng);
       if (distance < minDistance) {
         minDistance = distance;
         nearest = city;
       }
     }
 
-    AppLogger.i('CityService: nearest city is ${nearest?.name}');
+    AppLogger.i('CityService: haversine search took ${sw.elapsedMilliseconds - searchStart}ms');
+    AppLogger.i('CityService: nearest city is ${nearest?.name} (total ${sw.elapsedMilliseconds}ms)');
+    sw.stop();
     return nearest;
   }
 
-  static double _haversine(double lat1, double lon1, double lat2, double lon2) {
+  static double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
     const r = 6371000.0;
     final dLat = (lat2 - lat1) * math.pi / 180;
     final dLon = (lon2 - lon1) * math.pi / 180;

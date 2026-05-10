@@ -23,11 +23,14 @@ class _QuestsScreenState extends State<QuestsScreen>
 
   // Filter state
   String? _cityId;
+  CityData? _nearestCity;
   QuestCategory? _category;
   bool _sortPopular = false;
   bool _friendsOnly = false;
   
   bool _isLoadingLocation = false;
+  double? _userToCityKm;
+  int _activeQuestCount = 0;
 
   @override
   void initState() {
@@ -50,6 +53,12 @@ class _QuestsScreenState extends State<QuestsScreen>
         if (city != null && mounted) {
           setState(() {
             _cityId = city.id;
+            _nearestCity = city;
+            _userToCityKm = CityService.haversineMeters(
+              position.latitude, position.longitude,
+              city.lat, city.lng,
+            ) / 1000;
+            _activeQuestCount = 0;
             _refresh();
           });
         }
@@ -186,6 +195,9 @@ class _QuestsScreenState extends State<QuestsScreen>
               } else {
                 setState(() {
                   _cityId = null;
+                  _nearestCity = null;
+                  _userToCityKm = null;
+                  _activeQuestCount = 0;
                   _refresh();
                 });
               }
@@ -246,6 +258,12 @@ class _QuestsScreenState extends State<QuestsScreen>
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _buildFilterBar(),
+          if (_nearestCity != null)
+            _NearestCityBanner(
+              cityName: _nearestCity!.name,
+              distanceKm: _userToCityKm,
+              questCount: _activeQuestCount,
+            ),
           const Divider(height: 1),
           Expanded(
             child: TabBarView(
@@ -262,6 +280,7 @@ class _QuestsScreenState extends State<QuestsScreen>
                     friendsOnly: _friendsOnly,
                   ),
                   onVoted: _refresh,
+                  onLoaded: (count) => setState(() => _activeQuestCount = count),
                 ),
                 _QuestList(
                   key: ValueKey('pending-$_pendingKey'),
@@ -306,20 +325,71 @@ class _QuestsScreenState extends State<QuestsScreen>
   }
 }
 
-class _QuestList extends StatelessWidget {
+class _NearestCityBanner extends StatelessWidget {
+  const _NearestCityBanner({
+    required this.cityName,
+    required this.distanceKm,
+    required this.questCount,
+  });
+  final String cityName;
+  final double? distanceKm;
+  final int questCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final distStr = distanceKm != null ? '~${distanceKm!.round()}km from' : 'in';
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: colorScheme.primaryContainer.withValues(alpha: 0.4),
+      child: Row(
+        children: [
+          Icon(Icons.location_on, size: 14, color: colorScheme.primary),
+          const SizedBox(width: 6),
+          Text(
+            'Showing $questCount quests $distStr $cityName',
+            style: TextStyle(
+              fontSize: 13,
+              color: colorScheme.primary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuestList extends StatefulWidget {
   final Future<List<Quest>> Function() fetchQuests;
   final VoidCallback onVoted;
+  final void Function(int count)? onLoaded;
 
   const _QuestList({
     super.key,
     required this.fetchQuests,
     required this.onVoted,
+    this.onLoaded,
   });
+
+  @override
+  State<_QuestList> createState() => _QuestListState();
+}
+
+class _QuestListState extends State<_QuestList> {
+  late Future<List<Quest>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.fetchQuests();
+  }
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Quest>>(
-      future: fetchQuests(),
+      future: _future,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -337,6 +407,11 @@ class _QuestList extends StatelessWidget {
           );
         }
         final quests = snapshot.data ?? [];
+        if (snapshot.connectionState == ConnectionState.done) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            widget.onLoaded?.call(quests.length);
+          });
+        }
         if (quests.isEmpty) {
           return const Center(child: Text('No quests found.'));
         }
@@ -345,7 +420,7 @@ class _QuestList extends StatelessWidget {
           itemCount: quests.length,
           itemBuilder: (context, index) => QuestCard(
             quest: quests[index],
-            onVoted: onVoted,
+            onVoted: widget.onVoted,
           ),
         );
       },

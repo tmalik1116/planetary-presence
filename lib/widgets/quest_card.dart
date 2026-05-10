@@ -113,9 +113,17 @@ class _QuestCardState extends State<QuestCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _CategoryPill(
-                        label: _categoryLabel,
-                        color: categoryColor,
+                      Row(
+                        children: [
+                          _CategoryPill(
+                            label: _categoryLabel,
+                            color: categoryColor,
+                          ),
+                          if (widget.quest.cityName != null) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            _CityPill(name: widget.quest.cityName!),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
@@ -269,6 +277,40 @@ class _VoteRow extends StatelessWidget {
           isActive: userVote == 'down',
         ),
       ],
+    );
+  }
+}
+
+class _CityPill extends StatelessWidget {
+  const _CityPill({required this.name});
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.dmSecondaryBackground : AppColors.secondaryBackground;
+    final fg = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.location_on, size: 10, color: fg),
+          const SizedBox(width: 3),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 11,
+              color: fg,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
