@@ -98,72 +98,76 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
-    final screenHeight = MediaQuery.of(context).size.height;
-    final mapHeight = _selectedCity != null ? screenHeight * 0.45 : screenHeight;
-
     return Scaffold(
-      body: Column(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOutCubic,
-            height: mapHeight,
-            child: Stack(
-              children: [
-                FlutterMap(
-                  mapController: _mapController,
-                  options: MapOptions(
-                    initialCenter: _initialCenter,
-                    initialZoom: _initialZoom,
-                    onTap: (_, __) => _dismissCity(),
-                  ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final mapHeight = _selectedCity != null
+              ? constraints.maxHeight * 0.45
+              : constraints.maxHeight;
+          return Column(
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                height: mapHeight,
+                child: Stack(
                   children: [
-                    TileLayer(
-                      urlTemplate:
-                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                      userAgentPackageName: 'com.planetary_presence.app',
-                    ),
-                    MarkerLayer(
-                      markers: _cities
-                          .map(
-                            (city) => Marker(
-                              point: LatLng(city.lat, city.lng),
-                              width: 32,
-                              height: 32,
-                              child: GestureDetector(
-                                onTap: () => _selectCity(city),
-                                child: _CityPin(
-                                  selected: _selectedCity?.id == city.id,
+                    FlutterMap(
+                      mapController: _mapController,
+                      options: MapOptions(
+                        initialCenter: _initialCenter,
+                        initialZoom: _initialZoom,
+                        onTap: (_, __) => _dismissCity(),
+                      ),
+                      children: [
+                        TileLayer(
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          userAgentPackageName: 'com.planetary_presence.app',
+                        ),
+                        MarkerLayer(
+                          markers: _cities
+                              .map(
+                                (city) => Marker(
+                                  point: LatLng(city.lat, city.lng),
+                                  width: 32,
+                                  height: 32,
+                                  child: GestureDetector(
+                                    onTap: () => _selectCity(city),
+                                    child: _CityPin(
+                                      selected: _selectedCity?.id == city.id,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                          )
-                          .toList(),
+                              )
+                              .toList(),
+                        ),
+                      ],
+                    ),
+                    if (_loading)
+                      const Center(child: CircularProgressIndicator()),
+                    Positioned(
+                      top: MediaQuery.of(context).padding.top + AppSpacing.base,
+                      right: AppSpacing.base,
+                      child:
+                          _ZoomControls(onZoomIn: _zoomIn, onZoomOut: _zoomOut),
                     ),
                   ],
                 ),
-                if (_loading)
-                  const Center(child: CircularProgressIndicator()),
-                Positioned(
-                  top: MediaQuery.of(context).padding.top + AppSpacing.base,
-                  right: AppSpacing.base,
-                  child:
-                      _ZoomControls(onZoomIn: _zoomIn, onZoomOut: _zoomOut),
-                ),
-              ],
-            ),
-          ),
-          if (_selectedCity != null)
-            Expanded(
-              child: SlideTransition(
-                position: _panelSlide,
-                child: _CityQuestPanel(
-                  city: _selectedCity!,
-                  onDismiss: _dismissCity,
-                ),
               ),
-            ),
-        ],
+              if (_selectedCity != null)
+                Expanded(
+                  child: SlideTransition(
+                    position: _panelSlide,
+                    child: _CityQuestPanel(
+                      city: _selectedCity!,
+                      onDismiss: _dismissCity,
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
