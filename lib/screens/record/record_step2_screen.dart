@@ -7,8 +7,9 @@ import 'record_step3_screen.dart';
 
 class RecordStep2Screen extends StatefulWidget {
   final QuestCategory category;
+  final String? cityId;
 
-  const RecordStep2Screen({super.key, required this.category});
+  const RecordStep2Screen({super.key, required this.category, this.cityId});
 
   @override
   State<RecordStep2Screen> createState() => _RecordStep2ScreenState();
@@ -38,8 +39,10 @@ class _RecordStep2ScreenState extends State<RecordStep2Screen> {
   @override
   void initState() {
     super.initState();
-    _questsFuture =
-        _questService.getActiveQuestsByCategory(widget.category);
+    _questsFuture = _questService.getActiveQuestsByCategory(
+      widget.category,
+      cityId: widget.cityId,
+    );
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text.toLowerCase());
     });

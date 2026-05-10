@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/friend_service.dart';
@@ -21,6 +22,11 @@ class _StatsScreenState extends State<StatsScreen>
   _LeaderboardScope _scope = _LeaderboardScope.global;
   bool _lastMonth = false;
 
+  String _chartPeriod = 'week';
+  Map<String, Map<String, int>> _xpSeries = {};
+  List<FriendUser> _friends = [];
+  bool _chartLoading = false;
+
   List<LeaderboardEntry> _leaderboard = [];
   bool _loading = true;
   String? _error;
@@ -33,7 +39,12 @@ class _StatsScreenState extends State<StatsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.index == 2 && _xpSeries.isEmpty) {
+        _loadChart();
+      }
+    });
     _init();
   }
 
@@ -54,6 +65,7 @@ class _StatsScreenState extends State<StatsScreen>
     }
     setState(() => _profileLoaded = true);
     await _loadLeaderboard();
+    await _loadChart();
   }
 
   Future<void> _loadLeaderboard() async {
@@ -92,6 +104,29 @@ class _StatsScreenState extends State<StatsScreen>
     _loadLeaderboard();
   }
 
+  Future<void> _loadChart() async {
+    final userId = AuthService.currentUser?.id;
+    if (userId == null) return;
+    setState(() => _chartLoading = true);
+    try {
+      final friends = await FriendService().getFriends(userId);
+      final ids = [userId, ...friends.map((f) => f.id)];
+      final series = await StatsService.getXpTimeSeries(
+        userIds: ids,
+        period: _chartPeriod,
+      );
+      if (mounted) {
+        setState(() {
+          _friends = friends;
+          _xpSeries = series;
+          _chartLoading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _chartLoading = false);
+    }
+  }
+
   bool get _needsHomeCity =>
       _scope != _LeaderboardScope.global &&
       _scope != _LeaderboardScope.friends &&
@@ -119,6 +154,7 @@ class _StatsScreenState extends State<StatsScreen>
           tabs: const [
             Tab(text: 'Points'),
             Tab(text: 'Quests'),
+            Tab(text: 'Chart'),
           ],
         ),
       ),
@@ -194,6 +230,18 @@ class _StatsScreenState extends State<StatsScreen>
                                     onRefresh: _loadLeaderboard,
                                     isDark: isDark,
                                     rerank: true,
+                                  ),
+                                  _XpChartTab(
+                                    userId: AuthService.currentUser?.id ?? '',
+                                    friends: _friends,
+                                    xpSeries: _xpSeries,
+                                    period: _chartPeriod,
+                                    loading: _chartLoading,
+                                    isDark: isDark,
+                                    onPeriodChanged: (p) {
+                                      setState(() => _chartPeriod = p);
+                                      _loadChart();
+                                    },
                                   ),
                                 ],
                               ),
@@ -785,6 +833,264 @@ class _LeaderboardRow extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─── XP Chart Tab ─────────────────────────────────────────────────────────────
+
+class _XpChartTab extends StatelessWidget {
+  final String userId;
+  final List<FriendUser> friends;
+  final Map<String, Map<String, int>> xpSeries;
+  final String period;
+  final bool loading;
+  final bool isDark;
+  final ValueChanged<String> onPeriodChanged;
+
+  const _XpChartTab({
+    required this.userId,
+    required this.friends,
+    required this.xpSeries,
+    required this.period,
+    required this.loading,
+    required this.isDark,
+    required this.onPeriodChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final labelColor = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.base),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: ['day', 'week', 'month'].map((p) {
+              final active = period == p;
+              final label = p == 'day' ? '24h' : p == 'week' ? '7d' : '30d';
+              final green = isDark ? AppColors.dmPrimary : AppColors.primary;
+              return Padding(
+                padding: const EdgeInsets.only(right: AppSpacing.sm),
+                child: GestureDetector(
+                  onTap: () => onPeriodChanged(p),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: active ? green.withValues(alpha: 0.12) : Colors.transparent,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                      border: Border.all(
+                        color: active ? green : (isDark ? AppColors.dmBorder : AppColors.cardBorder),
+                      ),
+                    ),
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                        color: active ? green : labelColor,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: AppSpacing.base),
+          if (loading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else if (xpSeries.isEmpty || xpSeries.values.every((m) => m.isEmpty))
+            Expanded(
+              child: Center(
+                child: Text(
+                  'No activity in this period.',
+                  style: TextStyle(color: labelColor, fontSize: 14),
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: _XpChart(
+                userId: userId,
+                friends: friends,
+                xpSeries: xpSeries,
+                period: period,
+                isDark: isDark,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _XpChart extends StatelessWidget {
+  final String userId;
+  final List<FriendUser> friends;
+  final Map<String, Map<String, int>> xpSeries;
+  final String period;
+  final bool isDark;
+
+  const _XpChart({
+    required this.userId,
+    required this.friends,
+    required this.xpSeries,
+    required this.period,
+    required this.isDark,
+  });
+
+  List<String> _buildBuckets() {
+    final now = DateTime.now();
+    final buckets = <String>[];
+    if (period == 'day') {
+      for (int h = 23; h >= 0; h--) {
+        final t = now.subtract(Duration(hours: h));
+        buckets.add('${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')} ${t.hour.toString().padLeft(2, '0')}');
+      }
+    } else {
+      final days = period == 'week' ? 6 : 29;
+      for (int d = days; d >= 0; d--) {
+        final t = now.subtract(Duration(days: d));
+        buckets.add('${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}');
+      }
+    }
+    return buckets;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final buckets = _buildBuckets();
+    final green = isDark ? AppColors.dmPrimary : AppColors.primary;
+    final gridColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
+    final labelColor = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+
+    final friendColors = [
+      Colors.orange, Colors.purple, Colors.cyan, Colors.pink,
+      Colors.amber, Colors.teal,
+    ];
+
+    LineChartBarData buildLine(String uid, Color color, {bool isMe = false}) {
+      final data = xpSeries[uid] ?? {};
+      final spots = buckets.asMap().entries.map((e) {
+        return FlSpot(e.key.toDouble(), (data[e.value] ?? 0).toDouble());
+      }).toList();
+      return LineChartBarData(
+        spots: spots,
+        isCurved: true,
+        color: color,
+        barWidth: isMe ? 2.5 : 1.5,
+        dotData: const FlDotData(show: false),
+        belowBarData: isMe
+            ? BarAreaData(
+                show: true,
+                color: color.withValues(alpha: 0.08),
+              )
+            : BarAreaData(show: false),
+      );
+    }
+
+    final lines = <LineChartBarData>[
+      buildLine(userId, green, isMe: true),
+      ...friends.asMap().entries.map((e) =>
+          buildLine(e.value.id, friendColors[e.key % friendColors.length])),
+    ];
+
+    final legendItems = <Widget>[
+      _LegendDot(color: green, label: 'You'),
+      ...friends.asMap().entries.map((e) => _LegendDot(
+            color: friendColors[e.key % friendColors.length],
+            label: e.value.username,
+          )),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: LineChart(
+            LineChartData(
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (_) => FlLine(
+                  color: gridColor,
+                  strokeWidth: 1,
+                ),
+              ),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 36,
+                    getTitlesWidget: (val, meta) => Text(
+                      val.toInt().toString(),
+                      style: TextStyle(fontSize: 9, color: labelColor),
+                    ),
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 22,
+                    interval: period == 'day' ? 4 : period == 'week' ? 1 : 5,
+                    getTitlesWidget: (val, meta) {
+                      final idx = val.toInt();
+                      if (idx < 0 || idx >= buckets.length) return const SizedBox.shrink();
+                      final key = buckets[idx];
+                      final label = period == 'day'
+                          ? '${key.split(' ')[1]}h'
+                          : key.substring(8);
+                      return Text(label, style: TextStyle(fontSize: 9, color: labelColor));
+                    },
+                  ),
+                ),
+                topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+              ),
+              lineBarsData: lines,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.xs,
+          children: legendItems,
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
+          ),
+        ),
+      ],
     );
   }
 }

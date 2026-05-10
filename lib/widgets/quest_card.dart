@@ -113,9 +113,17 @@ class _QuestCardState extends State<QuestCard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _CategoryPill(
-                        label: _categoryLabel,
-                        color: categoryColor,
+                      Row(
+                        children: [
+                          _CategoryPill(
+                            label: _categoryLabel,
+                            color: categoryColor,
+                          ),
+                          if (widget.quest.cityName != null) ...[
+                            const SizedBox(width: AppSpacing.xs),
+                            _CityPill(name: widget.quest.cityName!),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
@@ -130,6 +138,19 @@ class _QuestCardState extends State<QuestCard> {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
+                if (widget.quest.imageUrl != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      widget.quest.imageUrl!,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
                 _PointsBadge(points: widget.quest.currentPoints),
               ],
             ),
@@ -145,6 +166,10 @@ class _QuestCardState extends State<QuestCard> {
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
+            ],
+            if (widget.quest.avgDifficultyRating > 0) ...[
+              const SizedBox(height: AppSpacing.xs),
+              _DifficultyIndicator(rating: widget.quest.avgDifficultyRating, isDark: isDark),
             ],
             if (widget.quest.status == QuestStatus.pending) ...[
               const SizedBox(height: AppSpacing.md),
@@ -267,6 +292,76 @@ class _VoteRow extends StatelessWidget {
           color: AppColors.categoryFood,
           borderColor: borderColor,
           isActive: userVote == 'down',
+        ),
+      ],
+    );
+  }
+}
+
+class _CityPill extends StatelessWidget {
+  const _CityPill({required this.name});
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bg = isDark ? AppColors.dmSecondaryBackground : AppColors.secondaryBackground;
+    final fg = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.location_on, size: 10, color: fg),
+          const SizedBox(width: 3),
+          Text(
+            name,
+            style: TextStyle(
+              fontSize: 11,
+              color: fg,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DifficultyIndicator extends StatelessWidget {
+  const _DifficultyIndicator({required this.rating, required this.isDark});
+  final double rating;
+  final bool isDark;
+
+  Color get _color {
+    if (rating <= 2.0) return const Color(0xFF2E9B1F);
+    if (rating <= 3.5) return const Color(0xFFF59E0B);
+    return const Color(0xFFEF4444);
+  }
+
+  String get _label {
+    if (rating <= 2.0) return 'Easy';
+    if (rating <= 3.5) return 'Medium';
+    return 'Hard';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(Icons.local_fire_department, size: 12, color: _color),
+        const SizedBox(width: 3),
+        Text(
+          '$_label · ${rating.toStringAsFixed(1)}',
+          style: TextStyle(
+            fontSize: 11,
+            color: _color,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );

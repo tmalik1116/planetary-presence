@@ -12,6 +12,14 @@ class LocationService {
         AppLogger.w('LocationService: permission not granted ($permission), skipping');
         return null;
       }
+      final last = await Geolocator.getLastKnownPosition();
+      if (last != null) {
+        AppLogger.i(
+          'LocationService: position=${last.latitude},${last.longitude} (cached)',
+        );
+        return last;
+      }
+
       final position = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.medium,

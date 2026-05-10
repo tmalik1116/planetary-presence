@@ -6,6 +6,7 @@ import '../models/quest.dart';
 import '../services/city_service.dart';
 import '../services/quest_service.dart';
 import '../widgets/quest_card.dart';
+import 'create_quest_screen.dart';
 import 'quest_detail_screen.dart';
 
 class MapScreen extends StatefulWidget {
@@ -24,6 +25,7 @@ class _MapScreenState extends State<MapScreen>
   static const double _initialZoom = 2.5;
 
   List<CityData> _cities = [];
+  Map<String, int> _questCounts = {};
   bool _loading = true;
   CityData? _selectedCity;
   List<Quest> _cityQuests = [];
@@ -63,10 +65,14 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _loadCities() async {
     try {
-      final cities = await _cityService.getCities();
+      final results = await Future.wait([
+        _cityService.getCities(),
+        _cityService.getActiveQuestCounts(),
+      ]);
       if (mounted) {
         setState(() {
-          _cities = cities;
+          _cities = results[0] as List<CityData>;
+          _questCounts = results[1] as Map<String, int>;
           _loading = false;
         });
       }
@@ -146,7 +152,7 @@ class _MapScreenState extends State<MapScreen>
                         initialCenter: _initialCenter,
                         initialZoom: _initialZoom,
                         minZoom: 2.5,
-                        cameraConstraint: CameraConstraint.containCenter(
+                        cameraConstraint: CameraConstraint.contain(
                           bounds: LatLngBounds(
                             const LatLng(-85.0, -179.9),
                             const LatLng(85.0, 179.9),
@@ -182,6 +188,7 @@ class _MapScreenState extends State<MapScreen>
                                     onTap: () => _selectCity(city),
                                     child: _CityPin(
                                       selected: _selectedCity?.id == city.id,
+                                      questCount: _questCounts[city.id] ?? 0,
                                     ),
                                   ),
                                 ),
@@ -249,28 +256,55 @@ class _MapScreenState extends State<MapScreen>
 // ---------------------------------------------------------------------------
 
 class _CityPin extends StatelessWidget {
-  const _CityPin({required this.selected});
+  const _CityPin({required this.selected, required this.questCount});
 
   final bool selected;
+  final int questCount;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: selected ? AppColors.primary : AppColors.primaryLight,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: selected ? AppColors.primaryDark : AppColors.primary,
-          width: 1.5,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : AppColors.primaryLight,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? AppColors.primaryDark : AppColors.primary,
+              width: 1.5,
+            ),
+          ),
+          child: Icon(
+            Icons.place,
+            color: selected ? Colors.white : AppColors.primary,
+            size: 18,
+          ),
         ),
-      ),
-      child: Icon(
-        Icons.place,
-        color: selected ? Colors.white : AppColors.primary,
-        size: 18,
-      ),
+        if (questCount > 0)
+          Positioned(
+            top: -4,
+            right: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white, width: 1),
+              ),
+              child: Text(
+                '$questCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -382,7 +416,7 @@ class _CityQuestPanel extends StatelessWidget {
           _PanelHeader(city: city, onDismiss: onDismiss, isDark: isDark),
           Divider(height: 1, thickness: 1, color: dividerColor),
           Expanded(
-            child: _QuestList(cityId: city.id, cityName: city.name),
+            child: _QuestList(city: city),
           ),
         ],
       ),
@@ -515,15 +549,14 @@ class _QuestPin extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _QuestList extends StatelessWidget {
-  const _QuestList({required this.cityId, required this.cityName});
+  const _QuestList({required this.city});
 
-  final String cityId;
-  final String cityName;
+  final CityData city;
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Quest>>(
-      future: QuestService().getActiveQuests(cityId: cityId),
+      future: QuestService().getActiveQuests(cityId: city.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -565,13 +598,27 @@ class _QuestList extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'No active quests in $cityName',
+                    'No active quests in ${city.name}',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => CreateQuestScreen(
+                        initialCity: city,
+                        onCreated: () {},
+                      ),
+                    )),
+                    icon: const Icon(Icons.add_circle_outline, size: 18),
+                    label: const Text('Be the first — add a quest'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
                   ),
                 ],
               ),

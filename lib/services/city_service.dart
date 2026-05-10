@@ -1,4 +1,4 @@
-import 'package:geolocator/geolocator.dart';
+import 'dart:math' as math;
 import '../services/logger_service.dart';
 import '../services/supabase_service.dart';
 
@@ -55,22 +55,59 @@ class CityService {
     }
   }
 
+  Future<Map<String, int>> getActiveQuestCounts() async {
+    try {
+      final response = await SupabaseService.client
+          .from('quests')
+          .select('city_id')
+          .eq('status', 'active');
+      final counts = <String, int>{};
+      for (final row in response as List<dynamic>) {
+        final cityId = row['city_id'] as String;
+        counts[cityId] = (counts[cityId] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e, st) {
+      AppLogger.e('CityService: failed to fetch quest counts', error: e, stackTrace: st);
+      return {};
+    }
+  }
+
   Future<CityData?> getNearestCity(double lat, double lng) async {
+    final sw = Stopwatch()..start();
+
     final cities = await getCities();
+    AppLogger.i('CityService: getCities took ${sw.elapsedMilliseconds}ms (${cities.length} cities)');
+
     if (cities.isEmpty) return null;
 
+    final searchStart = sw.elapsedMilliseconds;
     CityData? nearest;
     double minDistance = double.infinity;
 
     for (final city in cities) {
-      final distance = Geolocator.distanceBetween(lat, lng, city.lat, city.lng);
+      final distance = haversineMeters(lat, lng, city.lat, city.lng);
       if (distance < minDistance) {
         minDistance = distance;
         nearest = city;
       }
     }
-    
-    AppLogger.i('CityService: nearest city is ${nearest?.name}');
+
+    AppLogger.i('CityService: haversine search took ${sw.elapsedMilliseconds - searchStart}ms');
+    AppLogger.i('CityService: nearest city is ${nearest?.name} (total ${sw.elapsedMilliseconds}ms)');
+    sw.stop();
     return nearest;
+  }
+
+  static double haversineMeters(double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371000.0;
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLon = (lon2 - lon1) * math.pi / 180;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) *
+            math.cos(lat2 * math.pi / 180) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
   }
 }

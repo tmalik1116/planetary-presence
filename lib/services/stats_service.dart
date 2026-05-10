@@ -231,6 +231,50 @@ class StatsService {
     }
   }
 
+  /// Returns XP earned per time bucket for a list of userIds.
+  /// period: 'day' (last 24h, hourly), 'week' (last 7d, daily), 'month' (last 30d, daily)
+  /// Returns Map<userId, Map<bucketKey, points>>
+  /// bucketKey format: 'YYYY-MM-DD' for week/month, 'YYYY-MM-DD HH' for day
+  static Future<Map<String, Map<String, int>>> getXpTimeSeries({
+    required List<String> userIds,
+    required String period,
+  }) async {
+    if (userIds.isEmpty) return {};
+    try {
+      final now = DateTime.now();
+      final since = period == 'day'
+          ? now.subtract(const Duration(hours: 24))
+          : period == 'week'
+              ? now.subtract(const Duration(days: 7))
+              : now.subtract(const Duration(days: 30));
+
+      final data = await SupabaseService.client
+          .from('completions')
+          .select('user_id, points_awarded, completed_at')
+          .inFilter('user_id', userIds)
+          .gte('completed_at', since.toIso8601String());
+
+      final Map<String, Map<String, int>> result = {};
+      for (final uid in userIds) {
+        result[uid] = {};
+      }
+
+      for (final row in data) {
+        final uid = row['user_id'] as String;
+        final pts = row['points_awarded'] as int;
+        final dt = DateTime.parse(row['completed_at'] as String).toLocal();
+        final key = period == 'day'
+            ? '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} ${dt.hour.toString().padLeft(2, '0')}'
+            : '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+        result[uid]?[key] = (result[uid]?[key] ?? 0) + pts;
+      }
+      return result;
+    } catch (e, st) {
+      AppLogger.e('StatsService: getXpTimeSeries failed', error: e, stackTrace: st);
+      return {};
+    }
+  }
+
   static Future<int> getUserQuestCount(String userId) async {
     final rows = await _client
         .from('completions')

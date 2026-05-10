@@ -60,6 +60,7 @@ class Quest {
   final String? description;
   final QuestCategory category;
   final String cityId;
+  final String? cityName;
   final QuestStatus status;
   final String createdBy;
   final DateTime createdAt;
@@ -70,6 +71,7 @@ class Quest {
   final int netVotes;
   final double? lat;
   final double? lng;
+  final String? imageUrl;
 
   const Quest({
     required this.id,
@@ -77,6 +79,7 @@ class Quest {
     this.description,
     required this.category,
     required this.cityId,
+    this.cityName,
     required this.status,
     required this.createdBy,
     required this.createdAt,
@@ -87,6 +90,7 @@ class Quest {
     required this.netVotes,
     this.lat,
     this.lng,
+    this.imageUrl,
   });
 
   factory Quest.fromJson(Map<String, dynamic> json) {
@@ -96,6 +100,8 @@ class Quest {
       description: json['description'] as String?,
       category: QuestCategoryExtension.fromString(json['category'] as String),
       cityId: json['city_id'] as String,
+      cityName: json['city_name'] as String?
+          ?? (json['cities'] as Map<String, dynamic>?)?['name'] as String?,
       status: QuestStatusExtension.fromString(json['status'] as String),
       createdBy: json['created_by'] as String,
       createdAt: DateTime.parse(json['created_at'] as String),
@@ -106,6 +112,7 @@ class Quest {
       netVotes: json['net_votes'] as int,
       lat: (json['lat'] as num?)?.toDouble(),
       lng: (json['lng'] as num?)?.toDouble(),
+      imageUrl: json['image_url'] as String?,
     );
   }
 
@@ -116,6 +123,7 @@ class Quest {
       'description': description,
       'category': category.value,
       'city_id': cityId,
+      'city_name': cityName,
       'status': status.value,
       'created_by': createdBy,
       'created_at': createdAt.toIso8601String(),
@@ -126,6 +134,7 @@ class Quest {
       'net_votes': netVotes,
       'lat': lat,
       'lng': lng,
+      'image_url': imageUrl,
     };
   }
 }

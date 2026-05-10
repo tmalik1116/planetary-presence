@@ -1,4 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config/app_theme.dart';
 import '../models/quest.dart';
 import '../services/auth_service.dart';
@@ -7,8 +10,9 @@ import '../services/quest_service.dart';
 
 class CreateQuestScreen extends StatefulWidget {
   final VoidCallback onCreated;
+  final CityData? initialCity;
 
-  const CreateQuestScreen({super.key, required this.onCreated});
+  const CreateQuestScreen({super.key, required this.onCreated, this.initialCity});
 
   @override
   State<CreateQuestScreen> createState() => _CreateQuestScreenState();
@@ -26,6 +30,8 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
   List<CityData> _cities = [];
   bool _loading = false;
   bool _submitting = false;
+  File? _imageFile;
+  bool _uploadingImage = false;
 
   @override
   void initState() {
@@ -46,12 +52,35 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
     try {
       final cities = await CityService().getCities();
       cities.sort((a, b) => a.name.compareTo(b.name));
-      if (mounted) setState(() => _cities = cities);
+      if (mounted) {
+        setState(() {
+          _cities = cities;
+          if (_selectedCity == null && widget.initialCity != null) {
+            _selectedCity = cities.firstWhere(
+              (c) => c.id == widget.initialCity!.id,
+              orElse: () => cities.first,
+            );
+          }
+        });
+      }
     } catch (_) {
       // Cities will just be empty; user sees empty dropdown
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  Future<String?> _uploadImage() async {
+    if (_imageFile == null) return null;
+    final uid = AuthService.currentUser!.id;
+    final ext = _imageFile!.path.split('.').last;
+    final path = 'quests/${uid}_${DateTime.now().millisecondsSinceEpoch}.$ext';
+    await Supabase.instance.client.storage
+        .from('quest-images')
+        .upload(path, _imageFile!, fileOptions: const FileOptions(upsert: true));
+    return Supabase.instance.client.storage
+        .from('quest-images')
+        .getPublicUrl(path);
   }
 
   Future<void> _submit() async {
@@ -62,6 +91,15 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
 
     setState(() => _submitting = true);
     try {
+      String? imageUrl;
+      if (_imageFile != null) {
+        setState(() => _uploadingImage = true);
+        try {
+          imageUrl = await _uploadImage();
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
+        }
+      }
       await QuestService().createQuest(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim().isEmpty
@@ -70,6 +108,7 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
         category: _selectedCategory,
         cityId: _selectedCity!.id,
         createdBy: uid,
+        imageUrl: imageUrl,
       );
       widget.onCreated();
       if (mounted) Navigator.of(context).pop();
@@ -86,6 +125,7 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Quest'),
@@ -227,11 +267,67 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
                 ),
               ),
               const SizedBox(height: AppSpacing.lg),
+              _SectionHeader('Quest Image (optional)'),
+              GestureDetector(
+                onTap: () async {
+                  final picker = ImagePicker();
+                  final picked = await picker.pickImage(
+                      source: ImageSource.gallery, imageQuality: 80);
+                  if (picked != null && mounted) {
+                    setState(() => _imageFile = File(picked.path));
+                  }
+                },
+                child: Container(
+                  height: 160,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.dmSecondaryBackground
+                        : AppColors.secondaryBackground,
+                    borderRadius: BorderRadius.circular(AppRadius.card),
+                    border: Border.all(
+                      color: _imageFile != null
+                          ? AppColors.primary
+                          : (isDark ? AppColors.dmBorder : AppColors.cardBorder),
+                      width: _imageFile != null ? 2 : 1,
+                    ),
+                  ),
+                  child: _imageFile != null
+                      ? ClipRRect(
+                          borderRadius:
+                              BorderRadius.circular(AppRadius.card - 1),
+                          child: Image.file(_imageFile!,
+                              fit: BoxFit.cover, width: double.infinity),
+                        )
+                      : Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.add_photo_alternate_outlined,
+                              size: 36,
+                              color: isDark
+                                  ? AppColors.dmTextSecondary
+                                  : AppColors.textSecondary,
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Add quest image (optional)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark
+                                    ? AppColors.dmTextSecondary
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.base),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
-                  onPressed: _submitting ? null : _submit,
-                  child: _submitting
+                  onPressed: (_submitting || _uploadingImage) ? null : _submit,
+                  child: (_submitting || _uploadingImage)
                       ? const SizedBox(
                           height: 20,
                           width: 20,

@@ -37,7 +37,7 @@ class QuestService {
     try {
       var query = SupabaseService.client
           .from('quests')
-          .select()
+          .select('*, cities(name)')
           .eq('status', 'active');
 
       if (cityId != null) {
@@ -133,6 +133,7 @@ class QuestService {
     required QuestCategory category,
     required String cityId,
     required String createdBy,
+    String? imageUrl,
   }) async {
     try {
       final data = await SupabaseService.client
@@ -143,6 +144,7 @@ class QuestService {
             'category': category.value,
             'city_id': cityId,
             'created_by': createdBy,
+            'image_url': imageUrl,
           })
           .select()
           .single();
