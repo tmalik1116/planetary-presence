@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_theme.dart';
 import '../main.dart';
 import '../services/auth_service.dart';
@@ -72,6 +73,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onChanged: (mode) {
                     if (mode != null) {
                       themeModeNotifier.value = mode;
+                      SharedPreferences.getInstance().then((prefs) {
+                        prefs.setString('theme_mode', mode == ThemeMode.light
+                            ? 'light'
+                            : mode == ThemeMode.dark
+                                ? 'dark'
+                                : 'system');
+                      });
                     }
                   },
                 ),
