@@ -104,6 +104,13 @@ class _StatsScreenState extends State<StatsScreen>
       ),
       body: Column(
         children: [
+          _HeroCard(
+            profile: _profile,
+            leaderboard: _leaderboard,
+            currentUserId: currentUserId,
+            loading: _loading,
+            isDark: isDark,
+          ),
           _ScopeFilterRow(
             selected: _scope,
             onSelected: _setScope,
@@ -132,6 +139,7 @@ class _StatsScreenState extends State<StatsScreen>
                                 valueLabel: 'pts',
                                 getValue: (e) => e.totalPoints,
                                 onRefresh: _loadLeaderboard,
+                                isDark: isDark,
                               ),
                               _LeaderboardList(
                                 entries: _leaderboard,
@@ -139,12 +147,133 @@ class _StatsScreenState extends State<StatsScreen>
                                 valueLabel: 'pts',
                                 getValue: (e) => e.totalPoints,
                                 onRefresh: _loadLeaderboard,
+                                isDark: isDark,
                               ),
                             ],
                           ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _HeroCard extends StatelessWidget {
+  final ProfileData? profile;
+  final List<LeaderboardEntry> leaderboard;
+  final String? currentUserId;
+  final bool loading;
+  final bool isDark;
+
+  const _HeroCard({
+    required this.profile,
+    required this.leaderboard,
+    required this.currentUserId,
+    required this.loading,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    LeaderboardEntry? myEntry;
+    if (currentUserId != null) {
+      try {
+        myEntry = leaderboard.firstWhere((e) => e.userId == currentUserId);
+      } catch (_) {
+        myEntry = null;
+      }
+    }
+
+    final rankText = myEntry != null ? '#${myEntry.rank}' : '—';
+    final pointsText = myEntry != null ? '${myEntry.totalPoints} pts' : '—';
+
+    final gradient = isDark
+        ? const LinearGradient(
+            colors: [Color(0xFF1A3A10), Color(0xFF0D1F08)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          )
+        : const LinearGradient(
+            colors: [AppColors.primary, Color(0xFF165200)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
+
+    return Container(
+      margin: const EdgeInsets.all(AppSpacing.base),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.base,
+        vertical: AppSpacing.lg,
+      ),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: loading
+          ? const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Your Ranking',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        rankText,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Opacity(
+                  opacity: 0.3,
+                  child: const Icon(
+                    Icons.emoji_events,
+                    color: Colors.white,
+                    size: 40,
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'Total Points',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        pointsText,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 }
@@ -291,6 +420,7 @@ class _LeaderboardList extends StatelessWidget {
   final String valueLabel;
   final int Function(LeaderboardEntry) getValue;
   final Future<void> Function() onRefresh;
+  final bool isDark;
 
   const _LeaderboardList({
     required this.entries,
@@ -298,12 +428,42 @@ class _LeaderboardList extends StatelessWidget {
     required this.valueLabel,
     required this.getValue,
     required this.onRefresh,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
     if (entries.isEmpty) {
-      return const Center(child: Text('No data yet'));
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.leaderboard_outlined,
+              size: 48,
+              color: isDark ? AppColors.dmTextSecondary : AppColors.textTertiary,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'No rankings yet',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppColors.dmTextPrimary : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Complete quests to appear on the leaderboard',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
     }
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -356,23 +516,24 @@ class _LeaderboardRow extends StatelessWidget {
   }
 
   Widget _buildRankWidget(bool isDark) {
+    final isTop3 = entry.rank <= 3;
     switch (entry.rank) {
       case 1:
-        return const Text(
+        return Text(
           '🥇',
-          style: TextStyle(fontSize: 20),
+          style: TextStyle(fontSize: isTop3 ? 24 : 20),
           textAlign: TextAlign.center,
         );
       case 2:
-        return const Text(
+        return Text(
           '🥈',
-          style: TextStyle(fontSize: 20),
+          style: TextStyle(fontSize: isTop3 ? 24 : 20),
           textAlign: TextAlign.center,
         );
       case 3:
-        return const Text(
+        return Text(
           '🥉',
-          style: TextStyle(fontSize: 20),
+          style: TextStyle(fontSize: isTop3 ? 24 : 20),
           textAlign: TextAlign.center,
         );
       default:
@@ -391,22 +552,30 @@ class _LeaderboardRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isTop3 = entry.rank <= 3;
     final initials = entry.username.isNotEmpty
         ? entry.username[0].toUpperCase()
         : '?';
+    final verticalPadding = isTop3 ? AppSpacing.base + 4 : AppSpacing.md;
+    final usernameFontSize = isTop3 ? 16.0 : 15.0;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
+      padding: EdgeInsets.symmetric(
         horizontal: AppSpacing.base,
-        vertical: AppSpacing.md,
+        vertical: verticalPadding,
       ),
       decoration: BoxDecoration(
         color: isCurrentUser
-            ? AppColors.primaryLight
-            : (isDark ? AppColors.dmCard : AppColors.background),
+            ? (isDark
+                ? AppColors.dmPrimary.withValues(alpha: 0.18)
+                : AppColors.primaryLight)
+            : (isDark ? AppColors.dmCard : Colors.white),
         borderRadius: BorderRadius.circular(AppRadius.card),
         border: Border.all(
-          color: isDark ? AppColors.dmBorder : AppColors.cardBorder,
+          color: isCurrentUser
+              ? (isDark ? AppColors.dmPrimary : AppColors.primary)
+                  .withValues(alpha: 0.4)
+              : (isDark ? AppColors.dmBorder : AppColors.cardBorder),
         ),
       ),
       child: Row(
@@ -436,7 +605,7 @@ class _LeaderboardRow extends StatelessWidget {
                   child: Text(
                     entry.username,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: usernameFontSize,
                       fontWeight: FontWeight.w500,
                       color: isDark
                           ? AppColors.dmTextPrimary
