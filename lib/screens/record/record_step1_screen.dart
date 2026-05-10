@@ -5,7 +5,7 @@ import '../../models/quest.dart';
 import 'record_step2_screen.dart';
 
 /// Shows the Step 1 category sheet from any [BuildContext].
-Future<void> showRecordStep1Sheet(BuildContext context) {
+Future<void> showRecordStep1Sheet(BuildContext context, {String? cityId}) {
   return showModalBottomSheet<void>(
     context: context,
     backgroundColor: Colors.transparent,
@@ -13,12 +13,14 @@ Future<void> showRecordStep1Sheet(BuildContext context) {
     isScrollControlled: false,
     isDismissible: true,
     enableDrag: true,
-    builder: (_) => const _RecordStep1Sheet(),
+    builder: (_) => _RecordStep1Sheet(cityId: cityId),
   );
 }
 
 class _RecordStep1Sheet extends StatefulWidget {
-  const _RecordStep1Sheet();
+  final String? cityId;
+
+  const _RecordStep1Sheet({this.cityId});
 
   @override
   State<_RecordStep1Sheet> createState() => _RecordStep1SheetState();
@@ -52,7 +54,7 @@ class _RecordStep1SheetState extends State<_RecordStep1Sheet>
     Navigator.of(context).push(
       PageRouteBuilder(
         pageBuilder: (ctx, anim, secAnim) =>
-            RecordStep2Screen(category: category),
+            RecordStep2Screen(category: category, cityId: widget.cityId),
         transitionsBuilder: (ctx, anim, secAnim, child) {
           final curved =
               CurvedAnimation(parent: anim, curve: Curves.easeOutCubic);

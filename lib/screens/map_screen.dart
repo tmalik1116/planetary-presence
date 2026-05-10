@@ -6,6 +6,7 @@ import '../models/quest.dart';
 import '../services/city_service.dart';
 import '../services/quest_service.dart';
 import '../widgets/quest_card.dart';
+import 'create_quest_screen.dart';
 import 'quest_detail_screen.dart';
 
 class MapScreen extends StatefulWidget {
@@ -382,7 +383,7 @@ class _CityQuestPanel extends StatelessWidget {
           _PanelHeader(city: city, onDismiss: onDismiss, isDark: isDark),
           Divider(height: 1, thickness: 1, color: dividerColor),
           Expanded(
-            child: _QuestList(cityId: city.id, cityName: city.name),
+            child: _QuestList(city: city),
           ),
         ],
       ),
@@ -515,15 +516,14 @@ class _QuestPin extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _QuestList extends StatelessWidget {
-  const _QuestList({required this.cityId, required this.cityName});
+  const _QuestList({required this.city});
 
-  final String cityId;
-  final String cityName;
+  final CityData city;
 
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<Quest>>(
-      future: QuestService().getActiveQuests(cityId: cityId),
+      future: QuestService().getActiveQuests(cityId: city.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -565,13 +565,27 @@ class _QuestList extends StatelessWidget {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'No active quests in $cityName',
+                    'No active quests in ${city.name}',
                     style: const TextStyle(
                       color: AppColors.textSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  TextButton.icon(
+                    onPressed: () => Navigator.of(context).push(MaterialPageRoute(
+                      builder: (_) => CreateQuestScreen(
+                        initialCity: city,
+                        onCreated: () {},
+                      ),
+                    )),
+                    icon: const Icon(Icons.add_circle_outline, size: 18),
+                    label: const Text('Be the first — add a quest'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                    ),
                   ),
                 ],
               ),

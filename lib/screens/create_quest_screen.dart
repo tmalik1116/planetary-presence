@@ -7,8 +7,9 @@ import '../services/quest_service.dart';
 
 class CreateQuestScreen extends StatefulWidget {
   final VoidCallback onCreated;
+  final CityData? initialCity;
 
-  const CreateQuestScreen({super.key, required this.onCreated});
+  const CreateQuestScreen({super.key, required this.onCreated, this.initialCity});
 
   @override
   State<CreateQuestScreen> createState() => _CreateQuestScreenState();
@@ -46,7 +47,17 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
     try {
       final cities = await CityService().getCities();
       cities.sort((a, b) => a.name.compareTo(b.name));
-      if (mounted) setState(() => _cities = cities);
+      if (mounted) {
+        setState(() {
+          _cities = cities;
+          if (_selectedCity == null && widget.initialCity != null) {
+            _selectedCity = cities.firstWhere(
+              (c) => c.id == widget.initialCity!.id,
+              orElse: () => cities.first,
+            );
+          }
+        });
+      }
     } catch (_) {
       // Cities will just be empty; user sees empty dropdown
     } finally {
