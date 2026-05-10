@@ -1,10 +1,27 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../services/logger_service.dart';
+import '../services/auth_service.dart';
 import 'settings_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  Future<void> _signOut() async {
+    try {
+      await AuthService.signOut();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sign out failed: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,6 +77,15 @@ class ProfileScreen extends StatelessWidget {
                 final contents = file.readAsStringSync();
                 AppLogger.d(contents);
               },
+            ),
+            const Spacer(),
+            ListTile(
+              leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+              title: Text(
+                'Sign Out',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+              onTap: _signOut,
             ),
           ],
         ),
