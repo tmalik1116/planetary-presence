@@ -37,12 +37,19 @@ class CompletionService {
             'media_type': mediaType,
             if (tagline != null && tagline.isNotEmpty) 'tagline': tagline,
             if (mediaUrl != null) 'media_url': mediaUrl,
-            if (taggedUserIds.isNotEmpty) 'tagged_user_ids': taggedUserIds,
           })
           .select('id')
           .single();
 
       final id = data['id'] as String;
+      
+      if (taggedUserIds.isNotEmpty) {
+        final tagRows = taggedUserIds
+            .map((userId) => {'completion_id': id, 'tagged_user_id': userId})
+            .toList();
+        await _client.from('completion_tags').insert(tagRows);
+      }
+
       AppLogger.i('CompletionService: completion created id=$id');
       return id;
     } catch (e, st) {
