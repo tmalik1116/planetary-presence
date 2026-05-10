@@ -24,6 +24,37 @@ class QuestService {
     }
   }
 
+  Future<List<Quest>> getActiveQuestsByCategory(
+    QuestCategory category, {
+    String? cityId,
+  }) async {
+    try {
+      var query = SupabaseService.client
+          .from('quests')
+          .select()
+          .eq('status', 'active')
+          .eq('category', category.value);
+
+      if (cityId != null) {
+        query = query.eq('city_id', cityId);
+      }
+
+      final data = await query;
+      final quests = data.map((row) => Quest.fromJson(row)).toList();
+      AppLogger.i(
+        'Fetched ${quests.length} active ${category.value} quests',
+      );
+      return quests;
+    } catch (e, st) {
+      AppLogger.e(
+        'Failed to fetch active ${category.value} quests',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
+    }
+  }
+
   Future<List<Quest>> getPendingQuests({String? cityId}) async {
     try {
       var query = SupabaseService.client
