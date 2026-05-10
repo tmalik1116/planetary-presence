@@ -30,6 +30,14 @@ Add a dated entry under **Changelog** at the bottom of this file.
 ### Build / Run
 **Never** run `flutter run`, `flutter build`, or any command that launches/validates the app. These fail or hang in this environment. When build validation is needed, tell the user what command to run and what to look for.
 
+### Hot Reload Warning
+If changes include any of the following, explicitly tell the user **"This requires a full restart (`flutter run`), not hot reload"**:
+- New packages added to `pubspec.yaml`
+- Changes to `AndroidManifest.xml` or `Info.plist`
+- New native plugins integrated
+- Changes to `android/` or `ios/` build files
+- Asset additions to `pubspec.yaml`
+
 ### Human Validation
 **Before closing any GitHub issue**, ask the user to manually test the feature on device and confirm it works. Do not close the issue until the user explicitly says it's good. State clearly what to test and what the expected behavior is.
 
