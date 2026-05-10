@@ -1,6 +1,8 @@
 BEGIN;
 
--- Remove previously seeded quests
+-- Remove previously seeded quests (dependent rows first)
+DELETE FROM completions WHERE quest_id IN (SELECT id FROM quests WHERE created_by = '44742201-8bc2-4228-ac53-f37a46204392');
+DELETE FROM quest_votes WHERE quest_id IN (SELECT id FROM quests WHERE created_by = '44742201-8bc2-4228-ac53-f37a46204392');
 DELETE FROM quests WHERE created_by = '44742201-8bc2-4228-ac53-f37a46204392';
 
 INSERT INTO quests (id, title, description, category, difficulty, status, city_id, created_by, current_points, lat, lng) SELECT gen_random_uuid(), 'Coastal tide pools', 'Explore the tide pools at low tide and document 3 different marine species.', 'nature', 'easy', 'active', id, '44742201-8bc2-4228-ac53-f37a46204392', 50, NULL, NULL FROM cities WHERE name = 'New York City' LIMIT 1;
