@@ -139,3 +139,4 @@ lib/
 | 2026-05-10 | AppLogger: console + file logging, wired to QuestService and ProfileScreen | subagent |
 | 2026-05-10 | Light mode + Settings screen with theme toggle | subagent |
 | 2026-05-10 | Auth: email/password + Google OAuth, onboarding (username + home city) | subagent |
+| 2026-05-10 | Design system: AppTheme, AppColors, AppSpacing, redesigned nav + cards | subagent |

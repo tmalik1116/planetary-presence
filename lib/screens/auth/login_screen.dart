@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/app_theme.dart';
 import '../../services/auth_service.dart';
 import 'signup_screen.dart';
 
@@ -61,107 +62,176 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final primary = isDark ? AppColors.dmPrimary : AppColors.primary;
+    final subtitleColor =
+        isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
 
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Trailblazer',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: cs.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Sign in to continue',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: cs.onSurface.withValues(alpha: 0.6),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 28),
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.email_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Email is required';
-                          final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-                          if (!emailRegex.hasMatch(v.trim())) return 'Enter a valid email';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: Icon(Icons.lock_outlined),
-                          border: OutlineInputBorder(),
-                        ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) return 'Password is required';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      FilledButton(
-                        onPressed: _loading ? null : _signIn,
-                        child: _loading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Sign In'),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: _loading ? null : _signInWithGoogle,
-                        icon: const Icon(Icons.login),
-                        label: const Text('Sign in with Google'),
-                      ),
-                      const SizedBox(height: 20),
-                      TextButton(
-                        onPressed: _loading
-                            ? null
-                            : () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const SignupScreen(),
-                                  ),
-                                ),
-                        child: Text(
-                          "Don't have an account? Sign up",
-                          style: TextStyle(color: cs.primary),
-                        ),
-                      ),
-                    ],
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.xl,
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Trailblazer',
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      color: primary,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Sign in to continue',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: subtitleColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  TextFormField(
+                    controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: const InputDecoration(
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email_outlined),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Email is required';
+                      }
+                      final emailRegex =
+                          RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                      if (!emailRegex.hasMatch(v.trim())) {
+                        return 'Enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.base),
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                      prefixIcon: Icon(Icons.lock_outlined),
+                    ),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Password is required';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _loading ? null : _signIn,
+                      child: _loading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Sign In'),
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  _GoogleButton(
+                    label: 'Sign in with Google',
+                    onPressed: _loading ? null : _signInWithGoogle,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  TextButton(
+                    onPressed: _loading
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const SignupScreen(),
+                              ),
+                            ),
+                    child: Text(
+                      "Don't have an account? Sign up",
+                      style: TextStyle(color: primary),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoogleButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final bool isDark;
+
+  const _GoogleButton({
+    required this.label,
+    required this.onPressed,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = isDark ? AppColors.dmPrimary : AppColors.primary;
+    final bg = isDark ? AppColors.dmCard : AppColors.background;
+    final textColor = isDark ? AppColors.dmTextPrimary : AppColors.textPrimary;
+
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          backgroundColor: bg,
+          foregroundColor: textColor,
+          side: BorderSide(color: primary),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.button),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              alignment: Alignment.center,
+              child: Text(
+                'G',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: primary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+              ),
+            ),
+          ],
         ),
       ),
     );

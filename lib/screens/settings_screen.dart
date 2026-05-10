@@ -18,14 +18,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ValueListenableBuilder<ThemeMode>(
             valueListenable: themeModeNotifier,
             builder: (context, themeMode, _) {
-              return SwitchListTile(
-                title: const Text('Dark Mode'),
-                secondary: const Icon(Icons.dark_mode),
-                value: themeMode == ThemeMode.dark,
-                onChanged: (enabled) {
-                  themeModeNotifier.value =
-                      enabled ? ThemeMode.dark : ThemeMode.light;
-                },
+              return ListTile(
+                leading: const Icon(Icons.palette_outlined),
+                title: const Text('Theme'),
+                trailing: DropdownButton<ThemeMode>(
+                  value: themeMode,
+                  underline: const SizedBox.shrink(),
+                  items: const [
+                    DropdownMenuItem(
+                      value: ThemeMode.system,
+                      child: Text('System'),
+                    ),
+                    DropdownMenuItem(
+                      value: ThemeMode.light,
+                      child: Text('Light'),
+                    ),
+                    DropdownMenuItem(
+                      value: ThemeMode.dark,
+                      child: Text('Dark'),
+                    ),
+                  ],
+                  onChanged: (mode) {
+                    if (mode != null) {
+                      themeModeNotifier.value = mode;
+                    }
+                  },
+                ),
               );
             },
           ),

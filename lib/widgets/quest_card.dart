@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../config/app_theme.dart';
 import '../models/quest.dart';
 import '../services/quest_service.dart';
 
@@ -14,19 +15,6 @@ class QuestCard extends StatelessWidget {
     this.onVoted,
   });
 
-  String get _categoryEmoji {
-    switch (quest.category) {
-      case QuestCategory.nature:
-        return '🌿';
-      case QuestCategory.culture:
-        return '🎭';
-      case QuestCategory.food:
-        return '🍜';
-      case QuestCategory.landmark:
-        return '🏛️';
-    }
-  }
-
   String get _categoryLabel {
     switch (quest.category) {
       case QuestCategory.nature:
@@ -37,15 +25,6 @@ class QuestCard extends StatelessWidget {
         return 'Food';
       case QuestCategory.landmark:
         return 'Landmark';
-    }
-  }
-
-  Color get _statusColor {
-    switch (quest.status) {
-      case QuestStatus.active:
-        return Colors.green;
-      case QuestStatus.pending:
-        return Colors.orange;
     }
   }
 
@@ -64,110 +43,230 @@ class QuestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppColors.dmCard : AppColors.background;
+    final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
+    final categoryColor =
+        AppColors.categoryColor(quest.category.value, darkMode: isDark);
+    final titleColor =
+        isDark ? AppColors.dmTextPrimary : AppColors.textPrimary;
+    final metaColor =
+        isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.base,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: borderColor),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.base),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    quest.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _CategoryPill(
+                        label: _categoryLabel,
+                        color: categoryColor,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        quest.title,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: titleColor,
                         ),
+                      ),
+                    ],
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.shade100,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.shade400),
-                  ),
-                  child: Text(
-                    '${quest.currentPoints} pts',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.amber.shade800,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
+                const SizedBox(width: AppSpacing.sm),
+                _PointsBadge(points: quest.currentPoints),
               ],
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                Text(
-                  '$_categoryEmoji $_categoryLabel',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _statusColor.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _statusColor),
-                  ),
-                  child: Text(
-                    quest.status.value.toUpperCase(),
-                    style: TextStyle(
-                      color: _statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (quest.description != null && quest.description!.isNotEmpty) ...[
-              const SizedBox(height: 6),
+            if (quest.description != null &&
+                quest.description!.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 quest.description!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: metaColor,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
             ],
             if (quest.status == QuestStatus.pending) ...[
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Text(
-                    'Votes: ${quest.netVotes}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: () => _vote(context, 'up'),
-                    icon: const Icon(Icons.thumb_up_outlined, size: 16),
-                    label: const Text('Upvote'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: () => _vote(context, 'down'),
-                    icon: const Icon(Icons.thumb_down_outlined, size: 16),
-                    label: const Text('Downvote'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                    ),
-                  ),
-                ],
+              const SizedBox(height: AppSpacing.md),
+              _VoteRow(
+                netVotes: quest.netVotes,
+                onUpvote: () => _vote(context, 'up'),
+                onDownvote: () => _vote(context, 'down'),
+                isDark: isDark,
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryPill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _CategoryPill({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class _PointsBadge extends StatelessWidget {
+  final int points;
+
+  const _PointsBadge({required this.points});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final green = isDark ? AppColors.dmPrimary : AppColors.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: green.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Text(
+        '$points pts',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: green,
+        ),
+      ),
+    );
+  }
+}
+
+class _VoteRow extends StatelessWidget {
+  final int netVotes;
+  final VoidCallback onUpvote;
+  final VoidCallback onDownvote;
+  final bool isDark;
+
+  const _VoteRow({
+    required this.netVotes,
+    required this.onUpvote,
+    required this.onDownvote,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
+    final textColor =
+        isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+
+    return Row(
+      children: [
+        _VotePill(
+          icon: Icons.thumb_up_outlined,
+          label: 'Up',
+          onTap: onUpvote,
+          color: AppColors.categoryNature,
+          borderColor: borderColor,
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: Text(
+            '$netVotes',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
+          ),
+        ),
+        _VotePill(
+          icon: Icons.thumb_down_outlined,
+          label: 'Down',
+          onTap: onDownvote,
+          color: AppColors.categoryFood,
+          borderColor: borderColor,
+        ),
+      ],
+    );
+  }
+}
+
+class _VotePill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final Color color;
+  final Color borderColor;
+
+  const _VotePill({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    required this.color,
+    required this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
+            ),
           ],
         ),
       ),

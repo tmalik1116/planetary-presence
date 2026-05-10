@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/app_theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/supabase_service.dart';
 import '../../services/logger_service.dart';
@@ -82,84 +83,94 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final primary = isDark ? AppColors.dmPrimary : AppColors.primary;
+    final subtitleColor =
+        isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
 
     return Scaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: const EdgeInsets.all(28),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        'Welcome!',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: cs.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Set up your profile to get started',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: cs.onSurface.withValues(alpha: 0.6),
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 28),
-                      TextFormField(
-                        controller: _usernameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Username',
-                          prefixIcon: Icon(Icons.person_outlined),
-                          border: OutlineInputBorder(),
-                          helperText: 'Min 3 characters, no spaces',
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Username is required';
-                          if (v.contains(' ')) return 'Username cannot contain spaces';
-                          if (v.trim().length < 3) return 'Username must be at least 3 characters';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      TextFormField(
-                        controller: _cityController,
-                        decoration: const InputDecoration(
-                          labelText: 'Home City',
-                          prefixIcon: Icon(Icons.location_city_outlined),
-                          border: OutlineInputBorder(),
-                          helperText: 'The city you call home',
-                        ),
-                        validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Home city is required';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 28),
-                      FilledButton(
-                        onPressed: _loading ? null : _submit,
-                        child: _loading
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Text('Continue'),
-                      ),
-                    ],
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.lg,
+              vertical: AppSpacing.xl,
+            ),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Welcome!',
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      color: primary,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'Set up your profile to get started',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: subtitleColor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: Icon(Icons.person_outlined),
+                      helperText: 'Min 3 characters, no spaces',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Username is required';
+                      }
+                      if (v.contains(' ')) {
+                        return 'Username cannot contain spaces';
+                      }
+                      if (v.trim().length < 3) {
+                        return 'Username must be at least 3 characters';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  TextFormField(
+                    controller: _cityController,
+                    decoration: const InputDecoration(
+                      labelText: 'Home City',
+                      prefixIcon: Icon(Icons.location_city_outlined),
+                      helperText: 'The city you call home',
+                    ),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Home city is required';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _loading ? null : _submit,
+                      child: _loading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Continue'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
