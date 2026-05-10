@@ -1,3 +1,4 @@
+import 'package:geolocator/geolocator.dart';
 import '../services/logger_service.dart';
 import '../services/supabase_service.dart';
 
@@ -52,5 +53,24 @@ class CityService {
       AppLogger.e('CityService: failed to fetch cities', error: e, stackTrace: st);
       rethrow;
     }
+  }
+
+  Future<CityData?> getNearestCity(double lat, double lng) async {
+    final cities = await getCities();
+    if (cities.isEmpty) return null;
+
+    CityData? nearest;
+    double minDistance = double.infinity;
+
+    for (final city in cities) {
+      final distance = Geolocator.distanceBetween(lat, lng, city.lat, city.lng);
+      if (distance < minDistance) {
+        minDistance = distance;
+        nearest = city;
+      }
+    }
+    
+    AppLogger.i('CityService: nearest city is ${nearest?.name}');
+    return nearest;
   }
 }

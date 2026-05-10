@@ -1,8 +1,38 @@
 import '../models/quest.dart';
+import 'auth_service.dart';
 import 'logger_service.dart';
 import 'supabase_service.dart';
 
 class QuestService {
+  Future<List<Quest>> fetchQuests({
+    required String status,
+    String? cityId,
+    QuestCategory? category,
+    bool? isCompleted,
+    bool sortPopular = false,
+    bool friendsOnly = false,
+  }) async {
+    try {
+      final userId = AuthService.currentUser!.id;
+      final data = await SupabaseService.client.rpc('get_filtered_quests', params: {
+        'p_user_id': userId,
+        'p_city_id': cityId,
+        'p_category': category?.value,
+        'p_is_completed': isCompleted,
+        'p_sort_popular': sortPopular,
+        'p_friends_only': friendsOnly,
+        'p_status': status,
+      });
+
+      final quests = (data as List).map((row) => Quest.fromJson(row)).toList();
+      AppLogger.i('Fetched ${quests.length} filtered quests');
+      return quests;
+    } catch (e, st) {
+      AppLogger.e('Failed to fetch filtered quests', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
   Future<List<Quest>> getActiveQuests({String? cityId}) async {
     try {
       var query = SupabaseService.client
