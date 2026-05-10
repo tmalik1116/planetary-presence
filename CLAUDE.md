@@ -162,6 +162,7 @@ lib/
 | 2026-05-10 | GPS location service, user coordinates update on login | subagent |
 | 2026-05-10 | Map screen: flutter_map integration, OSM tiles, placeholder city markers | subagent |
 | 2026-05-10 | Onboarding city autocomplete with Supabase search | subagent |
+| 2026-05-10 | Create Quest redesign: full-screen form, category grid, difficulty pills, city dropdown, hints field; migration 005 adds difficulty column | subagent |
 | 2026-05-10 | CityService + CityData model; map screen loads city pins from Supabase (#12) | subagent |
 | 2026-05-10 | Profile header: ProfileService, username/points/join date/home city display (#26) | subagent |
 | 2026-05-10 | Stats screen: StatsService, LeaderboardEntry model, global points leaderboard (#22) | subagent |
