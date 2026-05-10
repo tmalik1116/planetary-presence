@@ -15,12 +15,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ProfileData? _profile;
   bool _loading = true;
   Map<String, int> _activityData = {};
+  PersonalRecords _records = const PersonalRecords(bestDayQuests: 0, bestDayPoints: 0);
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
     _loadActivityData();
+    _loadRecords();
   }
 
   Future<void> _loadProfile() async {
@@ -36,6 +38,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _loading = false;
       });
     }
+  }
+
+  Future<void> _loadRecords() async {
+    final user = AuthService.currentUser;
+    if (user == null) return;
+    final records = await ProfileService().getPersonalRecords(user.id);
+    if (mounted) setState(() => _records = records);
   }
 
   Future<void> _loadActivityData() async {
@@ -83,6 +92,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Padding(
               padding: const EdgeInsets.all(AppSpacing.base),
               child: _ActivityGraph(activityData: _activityData),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpacing.base, 0, AppSpacing.base, AppSpacing.base),
+              child: _PersonalRecords(records: _records, isDark: Theme.of(context).brightness == Brightness.dark),
             ),
             ListTile(
               leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
@@ -366,5 +379,114 @@ class _ActivityGraph extends StatelessWidget {
     if (count == 1) return AppColors.primary.withValues(alpha: 0.35);
     if (count == 2) return AppColors.primary.withValues(alpha: 0.6);
     return AppColors.primary;
+  }
+}
+
+class _PersonalRecords extends StatelessWidget {
+  final PersonalRecords records;
+  final bool isDark;
+
+  const _PersonalRecords({required this.records, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isDark ? AppColors.dmCard : AppColors.background;
+    final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
+    final labelColor = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.base),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Personal Records',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: labelColor,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _RecordTile(
+                  icon: Icons.emoji_events_outlined,
+                  label: 'Best Day (Quests)',
+                  value: records.bestDayQuests == 0 ? '—' : '${records.bestDayQuests}',
+                  isDark: isDark,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _RecordTile(
+                  icon: Icons.stars_outlined,
+                  label: 'Best Day (Points)',
+                  value: records.bestDayPoints == 0 ? '—' : '${records.bestDayPoints} pts',
+                  isDark: isDark,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecordTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final bool isDark;
+
+  const _RecordTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = isDark ? AppColors.dmSecondaryBackground : AppColors.secondaryBackground;
+    final labelColor = isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+    final valueColor = isDark ? AppColors.dmTextPrimary : AppColors.textPrimary;
+    final green = isDark ? AppColors.dmPrimary : AppColors.primary;
+
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: green),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: valueColor,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: labelColor),
+          ),
+        ],
+      ),
+    );
   }
 }
