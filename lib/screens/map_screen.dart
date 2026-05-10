@@ -146,7 +146,7 @@ class _MapScreenState extends State<MapScreen>
                         initialCenter: _initialCenter,
                         initialZoom: _initialZoom,
                         minZoom: 2.5,
-                        cameraConstraint: CameraConstraint.containCenter(
+                        cameraConstraint: CameraConstraint.contain(
                           bounds: LatLngBounds(
                             const LatLng(-85.0, -179.9),
                             const LatLng(85.0, 179.9),
