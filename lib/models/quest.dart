@@ -71,6 +71,7 @@ class Quest {
   final int netVotes;
   final double? lat;
   final double? lng;
+  final String? imageUrl;
 
   const Quest({
     required this.id,
@@ -89,6 +90,7 @@ class Quest {
     required this.netVotes,
     this.lat,
     this.lng,
+    this.imageUrl,
   });
 
   factory Quest.fromJson(Map<String, dynamic> json) {
@@ -110,6 +112,7 @@ class Quest {
       netVotes: json['net_votes'] as int,
       lat: (json['lat'] as num?)?.toDouble(),
       lng: (json['lng'] as num?)?.toDouble(),
+      imageUrl: json['image_url'] as String?,
     );
   }
 
@@ -131,6 +134,7 @@ class Quest {
       'net_votes': netVotes,
       'lat': lat,
       'lng': lng,
+      'image_url': imageUrl,
     };
   }
 }

@@ -174,3 +174,4 @@ lib/
 | 2026-05-10 | Quest pins on map: optional lat/lng on quests, pins shown when city panel open, tappable (#47) | subagent |
 | 2026-05-10 | XP over time line chart: fl_chart added, Chart tab on stats screen, StatsService.getXpTimeSeries, friend comparison lines | subagent |
 | 2026-05-10 | Theme persistence across restarts via shared_preferences ^2.3.2 | subagent |
+| 2026-05-10 | Quest image support: image_picker from gallery, upload to Supabase Storage `quest-images`, image_url on quest row, thumbnail in QuestCard, full-width hero in QuestDetailScreen; migration 011 adds column + updates get_filtered_quests RPC | subagent |

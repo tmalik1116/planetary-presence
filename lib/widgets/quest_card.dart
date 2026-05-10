@@ -138,6 +138,19 @@ class _QuestCardState extends State<QuestCard> {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
+                if (widget.quest.imageUrl != null) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      widget.quest.imageUrl!,
+                      width: 60,
+                      height: 60,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                ],
                 _PointsBadge(points: widget.quest.currentPoints),
               ],
             ),

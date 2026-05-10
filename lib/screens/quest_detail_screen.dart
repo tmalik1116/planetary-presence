@@ -151,6 +151,21 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Hero image
+            if (_quest.imageUrl != null) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                child: Image.network(
+                  _quest.imageUrl!,
+                  width: double.infinity,
+                  height: 220,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.base),
+            ],
+
             // Section D — Vote buttons (pending quests only)
             if (_quest.status == QuestStatus.pending) ...[
               Container(
