@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../config/app_theme.dart';
+import '../models/quest.dart';
 import '../services/city_service.dart';
 import '../services/quest_service.dart';
+import '../widgets/quest_card.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -12,7 +14,8 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
+class _MapScreenState extends State<MapScreen>
+    with SingleTickerProviderStateMixin {
   final MapController _mapController = MapController();
   final CityService _cityService = CityService();
 
@@ -23,9 +26,23 @@ class _MapScreenState extends State<MapScreen> {
   bool _loading = true;
   CityData? _selectedCity;
 
+  late final AnimationController _panelController;
+  late final Animation<Offset> _panelSlide;
+
   @override
   void initState() {
     super.initState();
+    _panelController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _panelSlide = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _panelController,
+      curve: Curves.easeOutCubic,
+    ));
     _loadCities();
   }
 
@@ -54,6 +71,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _mapController.dispose();
+    _panelController.dispose();
     super.dispose();
   }
 
@@ -69,73 +87,91 @@ class _MapScreenState extends State<MapScreen> {
 
   void _selectCity(CityData city) {
     setState(() => _selectedCity = city);
+    _panelController.forward();
   }
 
   void _dismissCity() {
-    setState(() => _selectedCity = null);
+    _panelController.reverse().then((_) {
+      if (mounted) setState(() => _selectedCity = null);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final mapHeight = _selectedCity != null ? screenHeight * 0.45 : screenHeight;
+
     return Scaffold(
-      body: Stack(
+      body: Column(
         children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              initialCenter: _initialCenter,
-              initialZoom: _initialZoom,
-              onTap: (_, __) => _dismissCity(),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOutCubic,
+            height: mapHeight,
+            child: Stack(
+              children: [
+                FlutterMap(
+                  mapController: _mapController,
+                  options: MapOptions(
+                    initialCenter: _initialCenter,
+                    initialZoom: _initialZoom,
+                    onTap: (_, __) => _dismissCity(),
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.planetary_presence.app',
+                    ),
+                    MarkerLayer(
+                      markers: _cities
+                          .map(
+                            (city) => Marker(
+                              point: LatLng(city.lat, city.lng),
+                              width: 32,
+                              height: 32,
+                              child: GestureDetector(
+                                onTap: () => _selectCity(city),
+                                child: _CityPin(
+                                  selected: _selectedCity?.id == city.id,
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ],
+                ),
+                if (_loading)
+                  const Center(child: CircularProgressIndicator()),
+                Positioned(
+                  top: MediaQuery.of(context).padding.top + AppSpacing.base,
+                  right: AppSpacing.base,
+                  child:
+                      _ZoomControls(onZoomIn: _zoomIn, onZoomOut: _zoomOut),
+                ),
+              ],
             ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.planetary_presence.app',
-              ),
-              MarkerLayer(
-                markers: _cities
-                    .map(
-                      (city) => Marker(
-                        point: LatLng(city.lat, city.lng),
-                        width: 32,
-                        height: 32,
-                        child: GestureDetector(
-                          onTap: () => _selectCity(city),
-                          child: _CityPin(
-                            selected: _selectedCity?.id == city.id,
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ],
           ),
-          if (_loading)
-            const Center(
-              child: CircularProgressIndicator(),
+          if (_selectedCity != null)
+            Expanded(
+              child: SlideTransition(
+                position: _panelSlide,
+                child: _CityQuestPanel(
+                  city: _selectedCity!,
+                  onDismiss: _dismissCity,
+                ),
+              ),
             ),
-          Positioned(
-            top: MediaQuery.of(context).padding.top + AppSpacing.base,
-            right: AppSpacing.base,
-            child: _ZoomControls(onZoomIn: _zoomIn, onZoomOut: _zoomOut),
-          ),
-          Positioned(
-            left: AppSpacing.base,
-            right: AppSpacing.base,
-            bottom: AppSpacing.base,
-            child: _selectedCity != null
-                ? _CityInfoCard(
-                    city: _selectedCity!,
-                    onDismiss: _dismissCity,
-                  )
-                : const _CityPlaceholderCard(),
-          ),
         ],
       ),
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// City pin marker
+// ---------------------------------------------------------------------------
 
 class _CityPin extends StatelessWidget {
   const _CityPin({required this.selected});
@@ -163,6 +199,10 @@ class _CityPin extends StatelessWidget {
     );
   }
 }
+
+// ---------------------------------------------------------------------------
+// Zoom controls overlay
+// ---------------------------------------------------------------------------
 
 class _ZoomControls extends StatelessWidget {
   const _ZoomControls({required this.onZoomIn, required this.onZoomOut});
@@ -219,178 +259,93 @@ class _ZoomButton extends StatelessWidget {
   }
 }
 
-class _CityPlaceholderCard extends StatelessWidget {
-  const _CityPlaceholderCard();
+// ---------------------------------------------------------------------------
+// Split-view quest panel
+// ---------------------------------------------------------------------------
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.base),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: const Text(
-        'Tap a city to explore quests',
-        style: TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-}
-
-class _CityInfoCard extends StatefulWidget {
-  const _CityInfoCard({required this.city, required this.onDismiss});
+class _CityQuestPanel extends StatelessWidget {
+  const _CityQuestPanel({
+    required this.city,
+    required this.onDismiss,
+  });
 
   final CityData city;
   final VoidCallback onDismiss;
 
   @override
-  State<_CityInfoCard> createState() => _CityInfoCardState();
-}
-
-class _CityInfoCardState extends State<_CityInfoCard> {
-  final QuestService _questService = QuestService();
-
-  bool _loadingQuests = true;
-  int? _questCount;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadQuestCount();
-  }
-
-  @override
-  void didUpdateWidget(_CityInfoCard oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.city.id != widget.city.id) {
-      setState(() {
-        _loadingQuests = true;
-        _questCount = null;
-      });
-      _loadQuestCount();
-    }
-  }
-
-  Future<void> _loadQuestCount() async {
-    try {
-      final quests =
-          await _questService.getActiveQuests(cityId: widget.city.id);
-      if (mounted) {
-        setState(() {
-          _questCount = quests.length;
-          _loadingQuests = false;
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _questCount = 0;
-          _loadingQuests = false;
-        });
-      }
-    }
-  }
-
-  String get _questLabel {
-    if (_questCount == null || _questCount == 0) return 'No quests yet';
-    if (_questCount == 1) return '1 active quest';
-    return '$_questCount active quests';
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.base),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(AppRadius.card),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A000000),
-            blurRadius: 10,
-            offset: Offset(0, 2),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.card),
+        ),
+        border: Border(
+          top: BorderSide(color: AppColors.cardBorder),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _PanelHeader(city: city, onDismiss: onDismiss),
+          const Divider(height: 1, thickness: 1, color: AppColors.divider),
+          Expanded(
+            child: _QuestList(cityId: city.id, cityName: city.name),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _PanelHeader extends StatelessWidget {
+  const _PanelHeader({required this.city, required this.onDismiss});
+
+  final CityData city;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.base,
+        AppSpacing.md,
+        AppSpacing.base,
+        AppSpacing.sm,
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  widget.city.name,
+                  city.name,
                   style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  widget.city.country,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
+                const Text(
+                  'Active Quests',
+                  style: TextStyle(
                     fontSize: 13,
+                    color: AppColors.textSecondary,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                _loadingQuests
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.primary,
-                        ),
-                      )
-                    : Row(
-                        children: [
-                          Icon(
-                            Icons.explore_outlined,
-                            size: 14,
-                            color: _questCount != null && _questCount! > 0
-                                ? AppColors.primary
-                                : AppColors.textTertiary,
-                          ),
-                          const SizedBox(width: AppSpacing.xs),
-                          Text(
-                            _questLabel,
-                            style: TextStyle(
-                              color: _questCount != null && _questCount! > 0
-                                  ? AppColors.primary
-                                  : AppColors.textTertiary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
               ],
             ),
           ),
           GestureDetector(
-            onTap: widget.onDismiss,
+            onTap: onDismiss,
             child: Container(
               width: 28,
               height: 28,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.secondaryBackground,
                 shape: BoxShape.circle,
               ),
@@ -403,6 +358,84 @@ class _CityInfoCardState extends State<_CityInfoCard> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _QuestList extends StatelessWidget {
+  const _QuestList({required this.cityId, required this.cityName});
+
+  final String cityId;
+  final String cityName;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Quest>>(
+      future: QuestService().getActiveQuests(cityId: cityId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Text(
+                'Failed to load quests. Pull to retry.',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+
+        final quests = snapshot.data ?? [];
+
+        if (quests.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.explore_outlined,
+                    size: 36,
+                    color: AppColors.textTertiary,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  Text(
+                    'No active quests in $cityName',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.only(
+            top: AppSpacing.sm,
+            bottom: AppSpacing.lg,
+          ),
+          itemCount: quests.length,
+          itemBuilder: (context, index) => QuestCard(quest: quests[index]),
+        );
+      },
     );
   }
 }
