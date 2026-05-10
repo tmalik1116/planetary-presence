@@ -19,13 +19,17 @@ class CityData {
   });
 
   factory CityData.fromMap(Map<String, dynamic> map) {
+    final coords = map['coordinates'] as Map<String, dynamic>;
+    final coordList = coords['coordinates'] as List<dynamic>;
+    final lng = (coordList[0] as num).toDouble();
+    final lat = (coordList[1] as num).toDouble();
     return CityData(
       id: map['id'] as String,
       name: map['name'] as String,
       country: map['country'] as String,
       state: map['state'] as String?,
-      lat: (map['lat'] as num).toDouble(),
-      lng: (map['lng'] as num).toDouble(),
+      lat: lat,
+      lng: lng,
     );
   }
 }
@@ -36,9 +40,7 @@ class CityService {
       AppLogger.i('CityService: fetching cities from Supabase');
       final response = await SupabaseService.client
           .from('cities')
-          .select(
-            'id, name, country, state, ST_X(coordinates::geometry) as lng, ST_Y(coordinates::geometry) as lat',
-          );
+          .select('id, name, country, state, coordinates');
 
       final cities = (response as List<dynamic>)
           .map((row) => CityData.fromMap(row as Map<String, dynamic>))
