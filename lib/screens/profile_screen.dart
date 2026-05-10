@@ -259,6 +259,13 @@ class _ActivityGraph extends StatelessWidget {
       current = current.add(const Duration(days: 7));
     }
 
+    const monthNames = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    const labelWidth = 28.0;
+    const gap = 3.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -276,32 +283,73 @@ class _ActivityGraph extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
-          child: Column(
-            children: weeks.map((week) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 3),
-                child: Row(
-                  children: week.map((day) {
-                    if (day == null) {
-                      return const SizedBox(width: 14 + 3, height: 14);
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final availableWidth = constraints.maxWidth - labelWidth;
+              final cellSize = (availableWidth - (6 * gap)) / 7;
+
+              return Column(
+                children: List.generate(weeks.length, (weekIndex) {
+                  final week = weeks[weekIndex];
+                  final firstReal = week.firstWhere(
+                    (d) => d != null,
+                    orElse: () => null,
+                  );
+                  String? monthLabel;
+                  if (firstReal != null) {
+                    final hasFirstOfMonth = week.any((d) => d != null && d.day == 1);
+                    if (weekIndex == 0 || hasFirstOfMonth) {
+                      final labelDay = hasFirstOfMonth
+                          ? week.firstWhere((d) => d != null && d.day == 1)!
+                          : firstReal;
+                      monthLabel = monthNames[labelDay.month - 1];
                     }
-                    final key =
-                        '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
-                    final count = activityData[key] ?? 0;
-                    final color = _cellColor(count, isDark);
-                    return Container(
-                      width: 14,
-                      height: 14,
-                      margin: const EdgeInsets.only(right: 3),
-                      decoration: BoxDecoration(
-                        color: color,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    );
-                  }).toList(),
-                ),
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: gap),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: labelWidth,
+                          child: monthLabel != null
+                              ? Text(
+                                  monthLabel,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    color: isDark
+                                        ? AppColors.dmTextSecondary
+                                        : AppColors.textSecondary,
+                                  ),
+                                )
+                              : null,
+                        ),
+                        ...List.generate(7, (di) {
+                          final day = week[di];
+                          final margin = di < 6 ? gap : 0.0;
+                          if (day == null) {
+                            return SizedBox(width: cellSize + margin, height: cellSize);
+                          }
+                          final key =
+                              '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+                          final count = activityData[key] ?? 0;
+                          return Container(
+                            width: cellSize,
+                            height: cellSize,
+                            margin: EdgeInsets.only(right: margin),
+                            decoration: BoxDecoration(
+                              color: _cellColor(count, isDark),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  );
+                }),
               );
-            }).toList(),
+            },
           ),
         ),
       ],
