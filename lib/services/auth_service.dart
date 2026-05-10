@@ -32,6 +32,7 @@ class AuthService {
     AppLogger.i('AuthService: signInWithGoogle');
     try {
       final googleSignIn = GoogleSignIn(
+        serverClientId: '915002219422-lpbdi2nsqnfdu4r8g4v4bhp5t2qb7d10.apps.googleusercontent.com',
         scopes: ['email', 'profile'],
       );
       final googleUser = await googleSignIn.signIn();
