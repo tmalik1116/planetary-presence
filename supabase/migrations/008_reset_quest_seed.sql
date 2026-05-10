@@ -1,6 +1,7 @@
 BEGIN;
 
--- Remove previously seeded quests (dependent rows first)
+-- Remove previously seeded quests (leaf tables first)
+DELETE FROM completion_tags WHERE completion_id IN (SELECT id FROM completions WHERE quest_id IN (SELECT id FROM quests WHERE created_by = '44742201-8bc2-4228-ac53-f37a46204392'));
 DELETE FROM completions WHERE quest_id IN (SELECT id FROM quests WHERE created_by = '44742201-8bc2-4228-ac53-f37a46204392');
 DELETE FROM quest_votes WHERE quest_id IN (SELECT id FROM quests WHERE created_by = '44742201-8bc2-4228-ac53-f37a46204392');
 DELETE FROM quests WHERE created_by = '44742201-8bc2-4228-ac53-f37a46204392';
