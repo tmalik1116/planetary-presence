@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../config/app_theme.dart';
 import '../services/city_service.dart';
+import '../services/quest_service.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -20,6 +21,7 @@ class _MapScreenState extends State<MapScreen> {
 
   List<CityData> _cities = [];
   bool _loading = true;
+  CityData? _selectedCity;
 
   @override
   void initState() {
@@ -65,6 +67,14 @@ class _MapScreenState extends State<MapScreen> {
     _mapController.move(current.center, current.zoom - 1);
   }
 
+  void _selectCity(CityData city) {
+    setState(() => _selectedCity = city);
+  }
+
+  void _dismissCity() {
+    setState(() => _selectedCity = null);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -72,9 +82,10 @@ class _MapScreenState extends State<MapScreen> {
         children: [
           FlutterMap(
             mapController: _mapController,
-            options: const MapOptions(
+            options: MapOptions(
               initialCenter: _initialCenter,
               initialZoom: _initialZoom,
+              onTap: (_, __) => _dismissCity(),
             ),
             children: [
               TileLayer(
@@ -88,17 +99,10 @@ class _MapScreenState extends State<MapScreen> {
                         point: LatLng(city.lat, city.lng),
                         width: 32,
                         height: 32,
-                        child: Container(
-                          width: 32,
-                          height: 32,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.place,
-                            color: Colors.white,
-                            size: 18,
+                        child: GestureDetector(
+                          onTap: () => _selectCity(city),
+                          child: _CityPin(
+                            selected: _selectedCity?.id == city.id,
                           ),
                         ),
                       ),
@@ -120,9 +124,41 @@ class _MapScreenState extends State<MapScreen> {
             left: AppSpacing.base,
             right: AppSpacing.base,
             bottom: AppSpacing.base,
-            child: const _CityInfoCard(),
+            child: _selectedCity != null
+                ? _CityInfoCard(
+                    city: _selectedCity!,
+                    onDismiss: _dismissCity,
+                  )
+                : const _CityPlaceholderCard(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CityPin extends StatelessWidget {
+  const _CityPin({required this.selected});
+
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 32,
+      height: 32,
+      decoration: BoxDecoration(
+        color: selected ? AppColors.primary : AppColors.primaryLight,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: selected ? AppColors.primaryDark : AppColors.primary,
+          width: 1.5,
+        ),
+      ),
+      child: Icon(
+        Icons.place,
+        color: selected ? Colors.white : AppColors.primary,
+        size: 18,
       ),
     );
   }
@@ -183,8 +219,8 @@ class _ZoomButton extends StatelessWidget {
   }
 }
 
-class _CityInfoCard extends StatelessWidget {
-  const _CityInfoCard();
+class _CityPlaceholderCard extends StatelessWidget {
+  const _CityPlaceholderCard();
 
   @override
   Widget build(BuildContext context) {
@@ -193,11 +229,12 @@ class _CityInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.cardBorder),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 12,
-            offset: Offset(0, 4),
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
           ),
         ],
       ),
@@ -209,6 +246,162 @@ class _CityInfoCard extends StatelessWidget {
           fontWeight: FontWeight.w500,
         ),
         textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+class _CityInfoCard extends StatefulWidget {
+  const _CityInfoCard({required this.city, required this.onDismiss});
+
+  final CityData city;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_CityInfoCard> createState() => _CityInfoCardState();
+}
+
+class _CityInfoCardState extends State<_CityInfoCard> {
+  final QuestService _questService = QuestService();
+
+  bool _loadingQuests = true;
+  int? _questCount;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadQuestCount();
+  }
+
+  @override
+  void didUpdateWidget(_CityInfoCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.city.id != widget.city.id) {
+      setState(() {
+        _loadingQuests = true;
+        _questCount = null;
+      });
+      _loadQuestCount();
+    }
+  }
+
+  Future<void> _loadQuestCount() async {
+    try {
+      final quests =
+          await _questService.getActiveQuests(cityId: widget.city.id);
+      if (mounted) {
+        setState(() {
+          _questCount = quests.length;
+          _loadingQuests = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _questCount = 0;
+          _loadingQuests = false;
+        });
+      }
+    }
+  }
+
+  String get _questLabel {
+    if (_questCount == null || _questCount == 0) return 'No quests yet';
+    if (_questCount == 1) return '1 active quest';
+    return '$_questCount active quests';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.base),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 10,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  widget.city.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  widget.city.country,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _loadingQuests
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          Icon(
+                            Icons.explore_outlined,
+                            size: 14,
+                            color: _questCount != null && _questCount! > 0
+                                ? AppColors.primary
+                                : AppColors.textTertiary,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                          Text(
+                            _questLabel,
+                            style: TextStyle(
+                              color: _questCount != null && _questCount! > 0
+                                  ? AppColors.primary
+                                  : AppColors.textTertiary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: widget.onDismiss,
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: AppColors.secondaryBackground,
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.close,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
