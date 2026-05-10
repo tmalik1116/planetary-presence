@@ -27,6 +27,9 @@ Update this file when any of the following change:
 
 Add a dated entry under **Changelog** at the bottom of this file.
 
+### Build / Run
+**Never** run `flutter run`, `flutter build`, or any command that launches/validates the app. These fail or hang in this environment. When build validation is needed, tell the user what command to run and what to look for.
+
 ### Code Style
 - Dart/Flutter conventions. No unnecessary comments.
 - Widgets in `lib/screens/` or `lib/widgets/` as appropriate.
