@@ -1,0 +1,128 @@
+# Trailblazer — Agent Guide
+
+## Project
+
+Flutter app. Gamified travel tracker — users complete location-based quests worldwide, earn points, compete on leaderboards.
+
+**Tagline:** Explore the globe and establish your planetary presence.
+
+---
+
+## Agent Rules
+
+### Git
+- Commit frequently as you work — after each logical unit (new file, feature complete, dependency added, etc.)
+- Commit message format: conventional commits (`feat:`, `fix:`, `chore:`, `refactor:`)
+- Never force push. Never skip hooks.
+
+### CLAUDE.md Updates
+Update this file when any of the following change:
+- New packages added to `pubspec.yaml`
+- New screens/pages created
+- Firebase or backend setup changed
+- Folder structure reorganized
+- Architecture decisions made
+- DB schema defined or changed
+- New environment variables or config files added
+
+Add a dated entry under **Changelog** at the bottom of this file.
+
+### Code Style
+- Dart/Flutter conventions. No unnecessary comments.
+- Widgets in `lib/screens/` or `lib/widgets/` as appropriate.
+- State management TBD — await direction from user before choosing.
+- Keep files focused. Split large widgets.
+
+---
+
+## App Architecture
+
+### Navigation
+Bottom navbar — 5 tabs:
+
+```
+[ Map ]  [ Quests ]  [ + ]  [ Stats ]  [ Profile ]
+```
+
+Central `+` button = primary action (record/complete quest). Visually distinct from other tabs.
+
+### Screens
+
+| Screen | Purpose |
+|--------|---------|
+| Map | Interactive world map, city pins, tap to see quests |
+| Quests | List nearby active quests, vote on pending, submit new |
+| Record | Complete a quest or add details (central nav button) |
+| Stats | Points, cities visited, quests done, activity graph |
+| Profile | Home city, settings entry point |
+| Charts | Leaderboard + other charts (`fl_charts`) |
+
+### Quest System
+- Quests scoped to cities (groupable by country)
+- Categories: Nature, Culture, Food, Landmarks
+- User-submitted, community-voted
+- Points vary by difficulty/rarity (dynamic assignment)
+- Home city quests: 2x points
+
+### Points & Leaderboard
+- Leaderboard tiers: Local → City → State → Country → Global
+- Friend leaderboard available
+
+---
+
+## Current Stack
+
+| Layer | Package | Status |
+|-------|---------|--------|
+| Flutter SDK | `flutter` | ✅ initialized |
+| Icons | `cupertino_icons ^1.0.8` | ✅ |
+| Charts | `fl_charts` | planned |
+| Maps | TBD | planned |
+| Backend | Firebase | planned |
+| State mgmt | TBD | pending decision |
+
+---
+
+## Folder Structure (target)
+
+```
+lib/
+  main.dart
+  screens/
+    map_screen.dart
+    quests_screen.dart
+    record_screen.dart
+    stats_screen.dart
+    profile_screen.dart
+    charts_screen.dart
+  widgets/
+    bottom_nav.dart
+    quest_card.dart
+    ...
+  models/
+    quest.dart
+    user.dart
+    ...
+  services/
+    firebase_service.dart
+    ...
+```
+
+---
+
+## First Steps Checklist
+
+- [x] App shell — `MaterialApp` + bottom navbar scaffold
+- [x] 5 placeholder screens wired to navbar
+- [ ] Firebase project setup + `pubspec.yaml` deps
+- [ ] DB schema design
+- [ ] Firebase initialization in app
+
+---
+
+## Changelog
+
+| Date | Change | Agent |
+|------|--------|-------|
+| 2026-05-09 | CLAUDE.md created, README reformatted | main |
+| 2026-05-09 | App shell created: MainShell + 5 screens + bottom nav | subagent |
