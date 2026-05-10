@@ -55,6 +55,24 @@ class CityService {
     }
   }
 
+  Future<Map<String, int>> getActiveQuestCounts() async {
+    try {
+      final response = await SupabaseService.client
+          .from('quests')
+          .select('city_id')
+          .eq('status', 'active');
+      final counts = <String, int>{};
+      for (final row in response as List<dynamic>) {
+        final cityId = row['city_id'] as String;
+        counts[cityId] = (counts[cityId] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e, st) {
+      AppLogger.e('CityService: failed to fetch quest counts', error: e, stackTrace: st);
+      return {};
+    }
+  }
+
   Future<CityData?> getNearestCity(double lat, double lng) async {
     final sw = Stopwatch()..start();
 

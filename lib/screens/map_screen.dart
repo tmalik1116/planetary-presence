@@ -25,6 +25,7 @@ class _MapScreenState extends State<MapScreen>
   static const double _initialZoom = 2.5;
 
   List<CityData> _cities = [];
+  Map<String, int> _questCounts = {};
   bool _loading = true;
   CityData? _selectedCity;
   List<Quest> _cityQuests = [];
@@ -64,10 +65,14 @@ class _MapScreenState extends State<MapScreen>
 
   Future<void> _loadCities() async {
     try {
-      final cities = await _cityService.getCities();
+      final results = await Future.wait([
+        _cityService.getCities(),
+        _cityService.getActiveQuestCounts(),
+      ]);
       if (mounted) {
         setState(() {
-          _cities = cities;
+          _cities = results[0] as List<CityData>;
+          _questCounts = results[1] as Map<String, int>;
           _loading = false;
         });
       }
@@ -183,6 +188,7 @@ class _MapScreenState extends State<MapScreen>
                                     onTap: () => _selectCity(city),
                                     child: _CityPin(
                                       selected: _selectedCity?.id == city.id,
+                                      questCount: _questCounts[city.id] ?? 0,
                                     ),
                                   ),
                                 ),
@@ -250,28 +256,55 @@ class _MapScreenState extends State<MapScreen>
 // ---------------------------------------------------------------------------
 
 class _CityPin extends StatelessWidget {
-  const _CityPin({required this.selected});
+  const _CityPin({required this.selected, required this.questCount});
 
   final bool selected;
+  final int questCount;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 32,
-      height: 32,
-      decoration: BoxDecoration(
-        color: selected ? AppColors.primary : AppColors.primaryLight,
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: selected ? AppColors.primaryDark : AppColors.primary,
-          width: 1.5,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : AppColors.primaryLight,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? AppColors.primaryDark : AppColors.primary,
+              width: 1.5,
+            ),
+          ),
+          child: Icon(
+            Icons.place,
+            color: selected ? Colors.white : AppColors.primary,
+            size: 18,
+          ),
         ),
-      ),
-      child: Icon(
-        Icons.place,
-        color: selected ? Colors.white : AppColors.primary,
-        size: 18,
-      ),
+        if (questCount > 0)
+          Positioned(
+            top: -4,
+            right: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white, width: 1),
+              ),
+              child: Text(
+                '$questCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
