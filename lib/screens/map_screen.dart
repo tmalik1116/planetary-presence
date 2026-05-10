@@ -98,6 +98,7 @@ class _MapScreenState extends State<MapScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -121,8 +122,12 @@ class _MapScreenState extends State<MapScreen>
                       ),
                       children: [
                         TileLayer(
-                          urlTemplate:
-                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          urlTemplate: isDark
+                              ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+                              : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          subdomains: isDark
+                              ? const ['a', 'b', 'c', 'd']
+                              : const [],
                           userAgentPackageName: 'com.planetary_presence.app',
                         ),
                         MarkerLayer(
@@ -149,8 +154,11 @@ class _MapScreenState extends State<MapScreen>
                     Positioned(
                       top: MediaQuery.of(context).padding.top + AppSpacing.base,
                       right: AppSpacing.base,
-                      child:
-                          _ZoomControls(onZoomIn: _zoomIn, onZoomOut: _zoomOut),
+                      child: _ZoomControls(
+                        onZoomIn: _zoomIn,
+                        onZoomOut: _zoomOut,
+                        isDark: isDark,
+                      ),
                     ),
                   ],
                 ),
@@ -162,6 +170,7 @@ class _MapScreenState extends State<MapScreen>
                     child: _CityQuestPanel(
                       city: _selectedCity!,
                       onDismiss: _dismissCity,
+                      isDark: isDark,
                     ),
                   ),
                 ),
@@ -209,17 +218,26 @@ class _CityPin extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _ZoomControls extends StatelessWidget {
-  const _ZoomControls({required this.onZoomIn, required this.onZoomOut});
+  const _ZoomControls({
+    required this.onZoomIn,
+    required this.onZoomOut,
+    required this.isDark,
+  });
 
   final VoidCallback onZoomIn;
   final VoidCallback onZoomOut;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
+    final bgColor = isDark ? AppColors.dmCard : Colors.white;
+    final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
+    final dividerColor = isDark ? AppColors.dmBorder : AppColors.divider;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: bgColor,
         borderRadius: BorderRadius.circular(AppRadius.button),
+        border: Border.all(color: borderColor),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A000000),
@@ -231,12 +249,12 @@ class _ZoomControls extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _ZoomButton(icon: Icons.add, onTap: onZoomIn),
-          const SizedBox(
+          _ZoomButton(icon: Icons.add, onTap: onZoomIn, isDark: isDark),
+          SizedBox(
             width: 32,
-            child: Divider(height: 1, thickness: 1, color: AppColors.divider),
+            child: Divider(height: 1, thickness: 1, color: dividerColor),
           ),
-          _ZoomButton(icon: Icons.remove, onTap: onZoomOut),
+          _ZoomButton(icon: Icons.remove, onTap: onZoomOut, isDark: isDark),
         ],
       ),
     );
@@ -244,20 +262,26 @@ class _ZoomControls extends StatelessWidget {
 }
 
 class _ZoomButton extends StatelessWidget {
-  const _ZoomButton({required this.icon, required this.onTap});
+  const _ZoomButton({
+    required this.icon,
+    required this.onTap,
+    required this.isDark,
+  });
 
   final IconData icon;
   final VoidCallback onTap;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
+    final iconColor = isDark ? AppColors.dmTextPrimary : AppColors.textPrimary;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.button),
       child: SizedBox(
         width: 40,
         height: 40,
-        child: Icon(icon, size: 20, color: AppColors.textPrimary),
+        child: Icon(icon, size: 20, color: iconColor),
       ),
     );
   }
@@ -271,28 +295,33 @@ class _CityQuestPanel extends StatelessWidget {
   const _CityQuestPanel({
     required this.city,
     required this.onDismiss,
+    required this.isDark,
   });
 
   final CityData city;
   final VoidCallback onDismiss;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
+    final bgColor = isDark ? AppColors.dmCard : Colors.white;
+    final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
+    final dividerColor = isDark ? AppColors.dmBorder : AppColors.divider;
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(
           top: Radius.circular(AppRadius.card),
         ),
         border: Border(
-          top: BorderSide(color: AppColors.cardBorder),
+          top: BorderSide(color: borderColor),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _PanelHeader(city: city, onDismiss: onDismiss),
-          const Divider(height: 1, thickness: 1, color: AppColors.divider),
+          _PanelHeader(city: city, onDismiss: onDismiss, isDark: isDark),
+          Divider(height: 1, thickness: 1, color: dividerColor),
           Expanded(
             child: _QuestList(cityId: city.id, cityName: city.name),
           ),
@@ -303,13 +332,23 @@ class _CityQuestPanel extends StatelessWidget {
 }
 
 class _PanelHeader extends StatelessWidget {
-  const _PanelHeader({required this.city, required this.onDismiss});
+  const _PanelHeader({
+    required this.city,
+    required this.onDismiss,
+    required this.isDark,
+  });
 
   final CityData city;
   final VoidCallback onDismiss;
+  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
+    final secondaryTextColor =
+        isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
+    final closeButtonBg = isDark
+        ? AppColors.dmSecondaryBackground
+        : AppColors.secondaryBackground;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.base,
@@ -333,11 +372,11 @@ class _PanelHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                const Text(
+                Text(
                   'Active Quests',
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: secondaryTextColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -349,14 +388,14 @@ class _PanelHeader extends StatelessWidget {
             child: Container(
               width: 28,
               height: 28,
-              decoration: const BoxDecoration(
-                color: AppColors.secondaryBackground,
+              decoration: BoxDecoration(
+                color: closeButtonBg,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.close,
                 size: 16,
-                color: AppColors.textSecondary,
+                color: secondaryTextColor,
               ),
             ),
           ),
