@@ -24,6 +24,37 @@ class QuestService {
     }
   }
 
+  Future<List<Quest>> getActiveQuestsByCategory(
+    QuestCategory category, {
+    String? cityId,
+  }) async {
+    try {
+      var query = SupabaseService.client
+          .from('quests')
+          .select()
+          .eq('status', 'active')
+          .eq('category', category.value);
+
+      if (cityId != null) {
+        query = query.eq('city_id', cityId);
+      }
+
+      final data = await query;
+      final quests = data.map((row) => Quest.fromJson(row)).toList();
+      AppLogger.i(
+        'Fetched ${quests.length} active ${category.value} quests',
+      );
+      return quests;
+    } catch (e, st) {
+      AppLogger.e(
+        'Failed to fetch active ${category.value} quests',
+        error: e,
+        stackTrace: st,
+      );
+      rethrow;
+    }
+  }
+
   Future<List<Quest>> getPendingQuests({String? cityId}) async {
     try {
       var query = SupabaseService.client
@@ -188,31 +219,7 @@ class QuestService {
         'vote': vote,
       });
 
-      final upVotes = await SupabaseService.client
-          .from('quest_votes')
-          .select()
-          .eq('quest_id', questId)
-          .eq('vote', 'up');
-
-      final downVotes = await SupabaseService.client
-          .from('quest_votes')
-          .select()
-          .eq('quest_id', questId)
-          .eq('vote', 'down');
-
-      final netVotes = upVotes.length - downVotes.length;
-
-      final updatePayload = <String, dynamic>{'net_votes': netVotes};
-      if (netVotes >= 100) {
-        updatePayload['status'] = 'active';
-      }
-
-      await SupabaseService.client
-          .from('quests')
-          .update(updatePayload)
-          .eq('id', questId);
-
-      AppLogger.i('Vote recorded for quest: $questId ($vote, net: $netVotes)');
+      AppLogger.i('Vote recorded for quest: $questId ($vote)');
     } catch (e, st) {
       AppLogger.e('Failed to vote on quest: $questId', error: e, stackTrace: st);
       rethrow;
