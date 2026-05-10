@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_heatmap_calendar/flutter_heatmap_calendar.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
@@ -237,100 +238,45 @@ class _ActivityGraph extends StatelessWidget {
 
   const _ActivityGraph({required this.activityData});
 
-  static const _dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-  Color _cellColor(int count, bool isDark) {
-    if (count == 0) {
-      return isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE);
-    } else if (count == 1) {
-      return AppColors.primary.withValues(alpha: 0.3);
-    } else if (count == 2) {
-      return AppColors.primary.withValues(alpha: 0.6);
-    } else {
-      return AppColors.primary;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Build 49-day grid: 7 weeks (columns) × 7 days (rows, Mon=0..Sun=6)
-    // Start from the Monday of the week 7 weeks ago
-    final now = DateTime.now();
-    // Find the most recent Sunday as end anchor
-    // We want 49 cells total: columns = weeks (oldest left), rows = Mon..Sun
-    // Calculate the start date: 48 days before today, adjusted to Monday
-    final todayWeekday = now.weekday; // 1=Mon..7=Sun
-    // Align so the last column ends with the current week (including today)
-    final daysFromMonday = todayWeekday - 1;
-    final weekStart = now.subtract(Duration(days: daysFromMonday));
-    final gridStart = weekStart.subtract(const Duration(days: 42)); // 6 full weeks back
+    // Convert Map<String, int> to Map<DateTime, int>
+    final Map<DateTime, int> datasets = {};
+    for (final entry in activityData.entries) {
+      try {
+        datasets[DateTime.parse(entry.key)] = entry.value;
+      } catch (_) {}
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Activity',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+          child: Text(
+            'Activity',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.sm),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Day labels column
-            Column(
-              children: List.generate(7, (dayIndex) {
-                return SizedBox(
-                  height: 16,
-                  child: Text(
-                    _dayLabels[dayIndex],
-                    style: const TextStyle(
-                      fontSize: 8,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                );
-              }),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            // 7 columns (weeks)
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: List.generate(7, (weekIndex) {
-                  return Column(
-                    children: List.generate(7, (dayIndex) {
-                      final cellDate = gridStart.add(
-                        Duration(days: weekIndex * 7 + dayIndex),
-                      );
-                      // Don't render future days
-                      final isFuture = cellDate.isAfter(now);
-                      final key =
-                          '${cellDate.year}-${cellDate.month.toString().padLeft(2, '0')}-${cellDate.day.toString().padLeft(2, '0')}';
-                      final count = isFuture ? 0 : (activityData[key] ?? 0);
-                      return Container(
-                        width: 12,
-                        height: 12,
-                        margin: const EdgeInsets.all(2),
-                        decoration: BoxDecoration(
-                          color: isFuture
-                              ? Colors.transparent
-                              : _cellColor(count, isDark),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      );
-                    }),
-                  );
-                }),
-              ),
-            ),
-          ],
+        HeatMap(
+          datasets: datasets,
+          colorMode: ColorMode.opacity,
+          defaultColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFEEEEEE),
+          textColor: isDark ? AppColors.dmTextSecondary : AppColors.textSecondary,
+          showColorTip: false,
+          showText: true,
+          scrollable: true,
+          size: 14,
+          colorsets: {
+            1: AppColors.primary,
+          },
         ),
       ],
     );

@@ -98,6 +98,7 @@ Central `+` button = primary action (record/complete quest). Visually distinct f
 | Flutter SDK | `flutter` | ✅ initialized |
 | Icons | `cupertino_icons ^1.0.8` | ✅ |
 | Charts | `fl_charts` | planned |
+| Heatmap | `flutter_heatmap_calendar ^1.0.5` | ✅ |
 | Maps | flutter_map ^8.1.1 + latlong2 ^0.9.1 | ✅ |
 | Backend | Supabase | ✅ `supabase_flutter ^2.8.4` |
 | Auth | Supabase Auth + google_sign_in ^6.2.2 | ✅ |
@@ -168,3 +169,4 @@ lib/
 | 2026-05-10 | Stats screen: StatsService, LeaderboardEntry model, global points leaderboard (#22) | subagent |
 | 2026-05-10 | Quest detail screen: read-only view with hero header, description, info, vote section; QuestCard taps navigate to it (#43) | subagent |
 | 2026-05-10 | Map split-view: city tap opens quest panel (55% map / 45% list), slide animation (#9) | subagent |
+| 2026-05-10 | Replace custom _ActivityGraph with flutter_heatmap_calendar GitHub-style heatmap (#28) | subagent |
