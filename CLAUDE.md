@@ -133,3 +133,4 @@ lib/
 | 2026-05-09 | CLAUDE.md created, README reformatted | main |
 | 2026-05-09 | App shell created: MainShell + 5 screens + bottom nav | subagent |
 | 2026-05-09 | Supabase integration: config, service, migration SQL | subagent |
+| 2026-05-09 | Quest model + QuestService CRUD | subagent |
