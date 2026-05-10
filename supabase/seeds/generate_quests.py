@@ -62,7 +62,7 @@ for city in CITIES:
         lines.append(
             f"INSERT INTO quests (id, title, description, category, difficulty, status, city_id, created_by, current_points) "
             f"SELECT gen_random_uuid(), '{title_s}', '{desc_s}', '{cat}', '{diff}', 'active', "
-            f"id, '00000000-0000-0000-0000-000000000001', {pts} "
+            f"id, '44742201-8bc2-4228-ac53-f37a46204392', {pts} "
             f"FROM cities WHERE name = '{city_s}' LIMIT 1;"
         )
 
