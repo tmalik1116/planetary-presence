@@ -165,12 +165,15 @@ class _MapScreenState extends State<MapScreen>
               ),
               if (_selectedCity != null)
                 Expanded(
-                  child: SlideTransition(
-                    position: _panelSlide,
-                    child: _CityQuestPanel(
-                      city: _selectedCity!,
-                      onDismiss: _dismissCity,
-                      isDark: isDark,
+                  child: ColoredBox(
+                    color: isDark ? AppColors.dmCard : Colors.white,
+                    child: SlideTransition(
+                      position: _panelSlide,
+                      child: _CityQuestPanel(
+                        city: _selectedCity!,
+                        onDismiss: _dismissCity,
+                        isDark: isDark,
+                      ),
                     ),
                   ),
                 ),
@@ -310,9 +313,6 @@ class _CityQuestPanel extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: bgColor,
-        borderRadius: const BorderRadius.vertical(
-          top: Radius.circular(AppRadius.card),
-        ),
         border: Border(
           top: BorderSide(color: borderColor),
         ),
