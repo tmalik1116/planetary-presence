@@ -96,6 +96,30 @@ class MediaUploadService {
     );
   }
 
+  /// Picks a photo and uploads it as an avatar.
+  Future<MediaUploadResult> pickAndUploadAvatar({
+    required String userId,
+    ImageSource source = ImageSource.gallery,
+  }) async {
+    final picked = await _picker.pickImage(
+      source: source,
+      imageQuality: 85,
+      maxWidth: 1024,
+      maxHeight: 1024,
+    );
+
+    if (picked == null) {
+      throw const MediaPickCancelledException();
+    }
+
+    // Use a special completionId 'avatar' or upload directly
+    return _upload(
+      file: File(picked.path),
+      userId: userId,
+      completionId: 'avatar',
+    );
+  }
+
   /// Picks a video from the gallery or camera and uploads it.
   Future<MediaUploadResult> pickAndUploadVideo({
     required String userId,

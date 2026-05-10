@@ -6,6 +6,20 @@ import 'supabase_service.dart';
 class CompletionService {
   static final _client = SupabaseService.client;
 
+  /// Fetches the set of city IDs where the user has completed at least one quest.
+  Future<Set<String>> getCompletedCityIds(String userId) async {
+    try {
+      final data = await _client
+          .from('completions')
+          .select('city_id')
+          .eq('user_id', userId);
+      return data.map((e) => e['city_id'] as String).toSet();
+    } catch (e, st) {
+      AppLogger.e('CompletionService: getCompletedCityIds failed', error: e, stackTrace: st);
+      return {};
+    }
+  }
+
   /// Inserts a new completion row into the `completions` table.
   ///
   /// Returns the UUID of the newly created completion.
@@ -67,7 +81,7 @@ class CompletionService {
     try {
       final data = await _client
           .from('completions')
-          .select()
+          .select('*, completion_tags(users(id, username))')
           .eq('quest_id', questId)
           .eq('user_id', userId)
           .maybeSingle();
@@ -84,7 +98,7 @@ class CompletionService {
     try {
       final data = await _client
           .from('completions')
-          .select('*, users!completions_user_id_fkey(username)')
+          .select('*, users!completions_user_id_fkey(username), completion_tags(users(id, username))')
           .eq('quest_id', questId)
           .order('completed_at', ascending: false)
           .limit(1)

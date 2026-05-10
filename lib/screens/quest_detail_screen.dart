@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import '../services/city_service.dart';
 import '../services/completion_service.dart';
 import '../services/quest_service.dart';
+import 'profile_screen.dart';
 
 class QuestDetailScreen extends StatefulWidget {
   final Quest quest;
@@ -380,6 +381,31 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                         ),
                       ],
                     ),
+                    if (_completion!['completion_tags'] != null && (_completion!['completion_tags'] as List).isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.xs),
+                      Wrap(
+                        spacing: 4,
+                        children: [
+                          Text('with:', style: TextStyle(fontSize: 13, color: secondaryColor)),
+                          ...(_completion!['completion_tags'] as List).map((t) {
+                            final user = t['users'];
+                            if (user == null) return const SizedBox.shrink();
+                            return InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (_) => ProfileScreen(userId: user['id'] as String)),
+                                );
+                              },
+                              child: Text(
+                                '@${user['username']}',
+                                style: TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.bold),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ],
                     if (_completion!['tagline'] != null && _completion!['tagline'].toString().isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.sm),
                       Text(
