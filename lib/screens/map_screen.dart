@@ -135,17 +135,30 @@ class _MapScreenState extends State<MapScreen>
                 height: mapHeight,
                 child: Stack(
                   children: [
-                    ColoredBox(
-                      color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFE8E0D8),
-                      child: FlutterMap(
+                    Positioned.fill(
+                      child: ColoredBox(
+                        color: isDark ? Colors.black : Colors.white,
+                      ),
+                    ),
+                    FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
                         initialCenter: _initialCenter,
                         initialZoom: _initialZoom,
-                        minZoom: 2.0,
+                        minZoom: 2.5,
+                        cameraConstraint: CameraConstraint.containCenter(
+                          bounds: LatLngBounds(
+                            const LatLng(-85.0, -179.9),
+                            const LatLng(85.0, 179.9),
+                          ),
+                        ),
                         onTap: (_, __) => _dismissCity(),
                         interactionOptions: const InteractionOptions(
-                          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                          flags: InteractiveFlag.drag |
+                              InteractiveFlag.pinchZoom |
+                              InteractiveFlag.doubleTapZoom |
+                              InteractiveFlag.scrollWheelZoom |
+                              InteractiveFlag.flingAnimation,
                         ),
                       ),
                       children: [
@@ -194,7 +207,6 @@ class _MapScreenState extends State<MapScreen>
                           )).toList(),
                         ),
                       ],
-                    ),
                     ),
                     if (_loading)
                       const Center(child: CircularProgressIndicator()),
