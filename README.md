@@ -21,7 +21,7 @@
     <img src="./docs/logo.png" alt="Logo" width="200" height="200">
   </a>
 
-<h3 align="center">Planertary Presence</h3>
+<h3 align="center">Planetary Presence</h3>
 
   <p align="center">
     Explore the globe and establish your planetary presence.
@@ -100,6 +100,7 @@ Don't forget to give the project a star! Thanks again!
 
 <!-- CONTACT -->
 ## Contact
+Talha Malik - [tmalik2004@gmail.com](mailto:tmalik2004@gmail.com)
 Musa Ahmed - [musaa.ahmed7@gmail.com](mailto:musaa.ahmed7@gmail.com)
 
 Project Link: [https://github.com/m-GDEV/planetary-presence](https://github.com/m-GDEV/planetary-presence)
