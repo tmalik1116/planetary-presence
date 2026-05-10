@@ -1,4 +1,4 @@
-import 'package:geolocator/geolocator.dart';
+import 'dart:math' as math;
 import '../services/logger_service.dart';
 import '../services/supabase_service.dart';
 
@@ -63,14 +63,26 @@ class CityService {
     double minDistance = double.infinity;
 
     for (final city in cities) {
-      final distance = Geolocator.distanceBetween(lat, lng, city.lat, city.lng);
+      final distance = _haversine(lat, lng, city.lat, city.lng);
       if (distance < minDistance) {
         minDistance = distance;
         nearest = city;
       }
     }
-    
+
     AppLogger.i('CityService: nearest city is ${nearest?.name}');
     return nearest;
+  }
+
+  static double _haversine(double lat1, double lon1, double lat2, double lon2) {
+    const r = 6371000.0;
+    final dLat = (lat2 - lat1) * math.pi / 180;
+    final dLon = (lon2 - lon1) * math.pi / 180;
+    final a = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1 * math.pi / 180) *
+            math.cos(lat2 * math.pi / 180) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+    return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
   }
 }
