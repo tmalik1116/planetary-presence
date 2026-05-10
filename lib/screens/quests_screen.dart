@@ -173,6 +173,7 @@ class _QuestsScreenState extends State<QuestsScreen>
                   )
                 : const Text('Nearest City'),
             selected: _cityId != null || _isLoadingLocation,
+            showCheckmark: !_isLoadingLocation,
             selectedColor: colorScheme.primary,
             checkmarkColor: colorScheme.onPrimary,
             labelStyle: TextStyle(
@@ -294,7 +295,12 @@ class _QuestsScreenState extends State<QuestsScreen>
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateQuestScreen,
         tooltip: 'Create Quest',
-        child: const Icon(Icons.add),
+        child: Icon(
+          Icons.add,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.white
+              : null,
+        ),
       ),
     );
   }

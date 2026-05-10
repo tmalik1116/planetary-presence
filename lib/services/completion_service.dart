@@ -62,6 +62,22 @@ class CompletionService {
     }
   }
 
+  /// Fetches a completion for a given quest and user, if it exists.
+  Future<Map<String, dynamic>?> getCompletionForQuest(String questId, String userId) async {
+    try {
+      final data = await _client
+          .from('completions')
+          .select()
+          .eq('quest_id', questId)
+          .eq('user_id', userId)
+          .maybeSingle();
+      return data;
+    } catch (e, st) {
+      AppLogger.e('CompletionService: getCompletionForQuest failed', error: e, stackTrace: st);
+      return null;
+    }
+  }
+
   /// Searches for users by username prefix (for the tag-friends picker).
   ///
   /// Excludes [excludeUserId] (the current user) from results.

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:video_player/video_player.dart';
 import '../config/app_theme.dart';
 import '../models/quest.dart';
 import '../services/auth_service.dart';
 import '../services/city_service.dart';
+import '../services/completion_service.dart';
 import '../services/quest_service.dart';
 
 class QuestDetailScreen extends StatefulWidget {
@@ -19,11 +22,30 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
   bool _loadingCity = true;
   late Quest _quest;
 
+  Map<String, dynamic>? _completion;
+  bool _loadingCompletion = true;
+
   @override
   void initState() {
     super.initState();
     _quest = widget.quest;
     _loadCity();
+    _loadCompletion();
+  }
+
+  Future<void> _loadCompletion() async {
+    final uid = AuthService.currentUser?.id;
+    if (uid == null) {
+      if (mounted) setState(() => _loadingCompletion = false);
+      return;
+    }
+    final comp = await CompletionService().getCompletionForQuest(_quest.id, uid);
+    if (mounted) {
+      setState(() {
+        _completion = comp;
+        _loadingCompletion = false;
+      });
+    }
   }
 
   Future<void> _loadCity() async {
@@ -246,7 +268,9 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                   Row(
                     children: [
                       _StatChip(
-                        label: '${_quest.currentPoints} pts',
+                        label: _completion != null 
+                            ? '${_completion!['points_awarded']} pts earned' 
+                            : '${_quest.currentPoints} pts',
                         color: green,
                         isDark: isDark,
                       ),
@@ -299,6 +323,120 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
                         height: 1.5,
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Section C — User's Completion Data
+            if (!_loadingCompletion && _completion != null) ...[
+              const SizedBox(height: AppSpacing.base),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(AppSpacing.base),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.dmPrimary.withValues(alpha: 0.1) : AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(AppRadius.card),
+                  border: Border.all(color: green.withValues(alpha: 0.5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle, color: green, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'You completed this quest!',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: titleColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_completion!['tagline'] != null && _completion!['tagline'].toString().isNotEmpty) ...[
+                      const SizedBox(height: AppSpacing.sm),
+                      Text(
+                        '“${_completion!['tagline']}”',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                          color: secondaryColor,
+                        ),
+                      ),
+                    ],
+                    if (_completion!['media_url'] != null) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      if (_completion!['media_type'] == 'image' || _completion!['media_type'] == 'photo')
+                        GestureDetector(
+                          onTap: () => _openMedia(_completion!['media_url']),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(AppRadius.card),
+                            child: Image.network(
+                              _completion!['media_url'],
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  height: 200,
+                                  color: Colors.black12,
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                              loadingProgress.expectedTotalBytes!
+                                          : null,
+                                    ),
+                                  ),
+                                );
+                              },
+                              errorBuilder: (context, error, stackTrace) => Container(
+                                height: 200,
+                                color: Colors.black12,
+                                child: const Center(child: Icon(Icons.broken_image, size: 40, color: Colors.black26)),
+                              ),
+                            ),
+                          ),
+                        )
+                      else if (_completion!['media_type'] == 'video')
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(AppRadius.card),
+                          child: _InlineVideoPlayer(url: _completion!['media_url']),
+                        )
+                      else
+                        InkWell(
+                          onTap: () => _openMedia(_completion!['media_url']),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: green,
+                              borderRadius: BorderRadius.circular(AppRadius.pill),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.file_present,
+                                  color: isDark ? Colors.black : Colors.white,
+                                  size: 16,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'View Attachment',
+                                  style: TextStyle(
+                                    color: isDark ? Colors.black : Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -374,6 +512,24 @@ class _QuestDetailScreenState extends State<QuestDetailScreen> {
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
     return names[month - 1];
+  }
+
+  Future<void> _openMedia(String urlStr) async {
+    try {
+      final url = Uri.parse(urlStr);
+      final success = await launchUrl(url, mode: LaunchMode.externalApplication);
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open media link.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening media: $e')),
+        );
+      }
+    }
   }
 }
 
@@ -542,6 +698,98 @@ class _VotePill extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _InlineVideoPlayer extends StatefulWidget {
+  final String url;
+  const _InlineVideoPlayer({required this.url});
+
+  @override
+  State<_InlineVideoPlayer> createState() => _InlineVideoPlayerState();
+}
+
+class _InlineVideoPlayerState extends State<_InlineVideoPlayer> {
+  late VideoPlayerController _controller;
+  bool _isInitialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+          });
+        }
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isInitialized) {
+      return Container(
+        width: double.infinity,
+        height: 200,
+        color: Colors.black12,
+        child: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return AspectRatio(
+      aspectRatio: _controller.value.aspectRatio,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          VideoPlayer(_controller),
+          _ControlsOverlay(controller: _controller),
+          VideoProgressIndicator(_controller, allowScrubbing: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _ControlsOverlay extends StatelessWidget {
+  const _ControlsOverlay({required this.controller});
+
+  final VideoPlayerController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 50),
+          reverseDuration: const Duration(milliseconds: 200),
+          child: controller.value.isPlaying
+              ? const SizedBox.shrink()
+              : Container(
+                  color: Colors.black26,
+                  child: const Center(
+                    child: Icon(
+                      Icons.play_arrow,
+                      color: Colors.white,
+                      size: 50.0,
+                      semanticLabel: 'Play',
+                    ),
+                  ),
+                ),
+        ),
+        GestureDetector(
+          onTap: () {
+            controller.value.isPlaying ? controller.pause() : controller.play();
+          },
+        ),
+      ],
     );
   }
 }
