@@ -81,7 +81,8 @@ Central `+` button = primary action (record/complete quest). Visually distinct f
 | Icons | `cupertino_icons ^1.0.8` | ✅ |
 | Charts | `fl_charts` | planned |
 | Maps | TBD | planned |
-| Backend | Firebase | planned |
+| Backend | Supabase | ✅ `supabase_flutter ^2.8.4` |
+| Database | Supabase Postgres + PostGIS | ✅ migration SQL ready |
 | State mgmt | TBD | pending decision |
 
 ---
@@ -106,8 +107,10 @@ lib/
     quest.dart
     user.dart
     ...
+  config/
+    supabase_config.dart
   services/
-    firebase_service.dart
+    supabase_service.dart
     ...
 ```
 
@@ -117,9 +120,9 @@ lib/
 
 - [x] App shell — `MaterialApp` + bottom navbar scaffold
 - [x] 5 placeholder screens wired to navbar
-- [ ] Firebase project setup + `pubspec.yaml` deps
-- [ ] DB schema design
-- [ ] Firebase initialization in app
+- [x] Supabase project setup + `pubspec.yaml` deps (`supabase_flutter ^2.8.4`)
+- [x] DB schema design (`supabase/migrations/001_initial_schema.sql`)
+- [x] Supabase initialization in app (`lib/main.dart`, `lib/config/supabase_config.dart`)
 
 ---
 
@@ -129,3 +132,4 @@ lib/
 |------|--------|-------|
 | 2026-05-09 | CLAUDE.md created, README reformatted | main |
 | 2026-05-09 | App shell created: MainShell + 5 screens + bottom nav | subagent |
+| 2026-05-09 | Supabase integration: config, service, migration SQL | subagent |
