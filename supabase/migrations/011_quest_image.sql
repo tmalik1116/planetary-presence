@@ -1,5 +1,8 @@
 ALTER TABLE quests ADD COLUMN IF NOT EXISTS image_url TEXT;
 
+DROP FUNCTION IF EXISTS get_filtered_quests(uuid, uuid, text, boolean, boolean, boolean, text);
+DROP FUNCTION IF EXISTS get_filtered_quests(uuid, text, uuid, text, boolean, boolean, boolean);
+
 CREATE OR REPLACE FUNCTION get_filtered_quests(
   p_user_id      UUID,
   p_city_id      UUID    DEFAULT NULL,

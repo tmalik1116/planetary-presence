@@ -90,16 +90,16 @@ class _CreateQuestScreenState extends State<CreateQuestScreen> {
     if (uid == null) return;
 
     setState(() => _submitting = true);
-    String? imageUrl;
-    if (_imageFile != null) {
-      setState(() => _uploadingImage = true);
-      try {
-        imageUrl = await _uploadImage();
-      } finally {
-        if (mounted) setState(() => _uploadingImage = false);
-      }
-    }
     try {
+      String? imageUrl;
+      if (_imageFile != null) {
+        setState(() => _uploadingImage = true);
+        try {
+          imageUrl = await _uploadImage();
+        } finally {
+          if (mounted) setState(() => _uploadingImage = false);
+        }
+      }
       await QuestService().createQuest(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim().isEmpty
