@@ -33,6 +33,12 @@ Add a dated entry under **Changelog** at the bottom of this file.
 ### Human Validation
 **Before closing any GitHub issue**, ask the user to manually test the feature on device and confirm it works. Do not close the issue until the user explicitly says it's good. State clearly what to test and what the expected behavior is.
 
+### Issue Assignment
+**When starting work on a GitHub issue**, immediately assign it to `m-GDEV` so the partner knows it's in progress:
+```
+gh issue edit <number> --add-assignee m-GDEV --repo tmalik1116/planetary-presence
+```
+
 ### Code Style
 - Dart/Flutter conventions. No unnecessary comments.
 - Widgets in `lib/screens/` or `lib/widgets/` as appropriate.
