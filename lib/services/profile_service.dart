@@ -7,6 +7,8 @@ class ProfileData {
   final int totalPoints;
   final DateTime joinedAt;
   final String? homeCityName;
+  final String? homeCityId;
+  final String? homeCityCountry;
 
   const ProfileData({
     required this.username,
@@ -14,6 +16,8 @@ class ProfileData {
     required this.totalPoints,
     required this.joinedAt,
     this.homeCityName,
+    this.homeCityId,
+    this.homeCityCountry,
   });
 }
 
@@ -25,7 +29,7 @@ class ProfileService {
     try {
       final data = await _client
           .from('users')
-          .select('username, email, total_points, joined_at, cities(name)')
+          .select('username, email, total_points, joined_at, home_city_id, cities(name, country)')
           .eq('id', userId)
           .maybeSingle();
 
@@ -34,12 +38,15 @@ class ProfileService {
         return null;
       }
 
+      final cityMap = data['cities'] as Map?;
       return ProfileData(
         username: data['username'] as String? ?? '',
         email: data['email'] as String? ?? '',
         totalPoints: data['total_points'] as int? ?? 0,
         joinedAt: DateTime.parse(data['joined_at'] as String),
-        homeCityName: (data['cities'] as Map?)?['name'] as String?,
+        homeCityName: cityMap?['name'] as String?,
+        homeCityId: data['home_city_id'] as String?,
+        homeCityCountry: cityMap?['country'] as String?,
       );
     } catch (e, st) {
       AppLogger.e('ProfileService: getProfile failed', error: e, stackTrace: st);

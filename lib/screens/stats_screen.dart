@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../services/auth_service.dart';
+import '../services/profile_service.dart';
 import '../services/stats_service.dart';
+
+enum _LeaderboardScope { global, city, country }
 
 class StatsScreen extends StatefulWidget {
   const StatsScreen({super.key});
@@ -13,15 +16,20 @@ class StatsScreen extends StatefulWidget {
 class _StatsScreenState extends State<StatsScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+
+  _LeaderboardScope _scope = _LeaderboardScope.global;
   List<LeaderboardEntry> _leaderboard = [];
   bool _loading = true;
   String? _error;
+
+  ProfileData? _profile;
+  bool _profileLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadLeaderboard();
+    _init();
   }
 
   @override
@@ -30,13 +38,26 @@ class _StatsScreenState extends State<StatsScreen>
     super.dispose();
   }
 
+  Future<void> _init() async {
+    final userId = AuthService.currentUser?.id;
+    if (userId != null) {
+      _profile = await ProfileService().getProfile(userId);
+    }
+    setState(() => _profileLoaded = true);
+    await _loadLeaderboard();
+  }
+
   Future<void> _loadLeaderboard() async {
     setState(() {
       _loading = true;
       _error = null;
     });
     try {
-      final entries = await StatsService.getGlobalLeaderboard();
+      final entries = await StatsService.getLeaderboard(
+        scope: _scope.name,
+        cityId: _profile?.homeCityId,
+        country: _profile?.homeCityCountry,
+      );
       setState(() {
         _leaderboard = entries;
         _loading = false;
@@ -48,6 +69,18 @@ class _StatsScreenState extends State<StatsScreen>
       });
     }
   }
+
+  void _setScope(_LeaderboardScope scope) {
+    if (_scope == scope) return;
+    setState(() => _scope = scope);
+    _loadLeaderboard();
+  }
+
+  bool get _needsHomeCity =>
+      _scope != _LeaderboardScope.global &&
+      (_scope == _LeaderboardScope.city
+          ? _profile?.homeCityId == null
+          : _profile?.homeCityCountry == null);
 
   @override
   Widget build(BuildContext context) {
@@ -67,33 +100,171 @@ class _StatsScreenState extends State<StatsScreen>
           ],
         ),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(color: Colors.red),
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _LeaderboardList(
-                      entries: _leaderboard,
-                      currentUserId: currentUserId,
-                      valueLabel: 'pts',
-                      getValue: (e) => e.totalPoints,
-                    ),
-                    _LeaderboardList(
-                      entries: _leaderboard,
-                      currentUserId: currentUserId,
-                      valueLabel: 'pts',
-                      getValue: (e) => e.totalPoints,
-                    ),
-                  ],
-                ),
+      body: Column(
+        children: [
+          _ScopeFilterRow(
+            selected: _scope,
+            onSelected: _setScope,
+          ),
+          Expanded(
+            child: _profileLoaded && _needsHomeCity
+                ? _NoCityMessage(
+                    scope: _scope == _LeaderboardScope.city ? 'city' : 'country',
+                  )
+                : _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
+                        ? Center(
+                            child: Text(
+                              _error!,
+                              style: const TextStyle(color: Colors.red),
+                              textAlign: TextAlign.center,
+                            ),
+                          )
+                        : TabBarView(
+                            controller: _tabController,
+                            children: [
+                              _LeaderboardList(
+                                entries: _leaderboard,
+                                currentUserId: currentUserId,
+                                valueLabel: 'pts',
+                                getValue: (e) => e.totalPoints,
+                                onRefresh: _loadLeaderboard,
+                              ),
+                              _LeaderboardList(
+                                entries: _leaderboard,
+                                currentUserId: currentUserId,
+                                valueLabel: 'pts',
+                                getValue: (e) => e.totalPoints,
+                                onRefresh: _loadLeaderboard,
+                              ),
+                            ],
+                          ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScopeFilterRow extends StatelessWidget {
+  final _LeaderboardScope selected;
+  final ValueChanged<_LeaderboardScope> onSelected;
+
+  const _ScopeFilterRow({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.base,
+        vertical: AppSpacing.md,
+      ),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        border: Border(
+          bottom: BorderSide(color: AppColors.divider),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          _ScopePill(
+            label: 'Global',
+            active: selected == _LeaderboardScope.global,
+            onTap: () => onSelected(_LeaderboardScope.global),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          _ScopePill(
+            label: 'City',
+            active: selected == _LeaderboardScope.city,
+            onTap: () => onSelected(_LeaderboardScope.city),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          _ScopePill(
+            label: 'Country',
+            active: selected == _LeaderboardScope.country,
+            onTap: () => onSelected(_LeaderboardScope.country),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScopePill extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _ScopePill({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.base,
+          vertical: AppSpacing.xs + 2,
+        ),
+        decoration: BoxDecoration(
+          color: active ? AppColors.primary : AppColors.background,
+          borderRadius: BorderRadius.circular(AppRadius.pill),
+          border: Border.all(
+            color: active ? AppColors.primary : AppColors.cardBorder,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: active ? Colors.white : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoCityMessage extends StatelessWidget {
+  final String scope;
+
+  const _NoCityMessage({required this.scope});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.xl),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(
+            Icons.location_city_outlined,
+            size: 48,
+            color: AppColors.textTertiary,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            'Set a home city in your profile to see $scope leaderboards',
+            style: const TextStyle(
+              fontSize: 15,
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -103,12 +274,14 @@ class _LeaderboardList extends StatelessWidget {
   final String? currentUserId;
   final String valueLabel;
   final int Function(LeaderboardEntry) getValue;
+  final Future<void> Function() onRefresh;
 
   const _LeaderboardList({
     required this.entries,
     required this.currentUserId,
     required this.valueLabel,
     required this.getValue,
+    required this.onRefresh,
   });
 
   @override
@@ -117,7 +290,7 @@ class _LeaderboardList extends StatelessWidget {
       return const Center(child: Text('No data yet'));
     }
     return RefreshIndicator(
-      onRefresh: () async {},
+      onRefresh: onRefresh,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.base,
