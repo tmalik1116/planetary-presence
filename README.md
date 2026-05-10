@@ -103,7 +103,7 @@ Don't forget to give the project a star! Thanks again!
 Talha Malik - [tmalik2004@gmail.com](mailto:tmalik2004@gmail.com)
 Musa Ahmed - [musaa.ahmed7@gmail.com](mailto:musaa.ahmed7@gmail.com)
 
-Project Link: [https://github.com/m-GDEV/planetary-presence](https://github.com/m-GDEV/planetary-presence)
+Project Link: [https://github.com/tmalik1116/planetary-presence](https://github.com/tmalik1116/planetary-presence)
 
 <!-- ACKNOWLEDGMENTS -->
 ## Acknowledgments
