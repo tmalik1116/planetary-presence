@@ -83,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Trailblazer',
+                    'Planetary Presence',
                     style: theme.textTheme.displayMedium?.copyWith(
                       color: primary,
                     ),

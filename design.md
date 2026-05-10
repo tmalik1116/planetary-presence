@@ -1,8 +1,8 @@
-# Trailblazer UI Design System & Visual Guidelines
+# Planetary Presence UI Design System & Visual Guidelines
 
 ## Overview
 
-Trailblazer is a gamified travel and exploration app focused on quests, city discovery, and social competition. The UI should feel:
+Planetary Presence is a gamified travel and exploration app focused on quests, city discovery, and social competition. The UI should feel:
 
 * Clean
 * Modern
@@ -670,7 +670,7 @@ Recommended:
 
 # Final Visual Goal
 
-Trailblazer should visually feel like a blend of:
+Planetary Presence should visually feel like a blend of:
 
 * Modern travel app
 * Fitness tracking app

@@ -1,5 +1,5 @@
-name: app
-description: "A new Flutter project."
+name: planetary_presence
+description: "Explore the globe and establish your planetary presence."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -38,6 +38,9 @@ dependencies:
   google_sign_in: ^6.2.2
   logger: ^2.5.0
   path_provider: ^2.1.5
+  geolocator: ^13.0.2
+  flutter_map: ^8.1.1
+  latlong2: ^0.9.1
 
 dev_dependencies:
   flutter_test:

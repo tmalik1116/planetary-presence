@@ -1,4 +1,4 @@
-# Trailblazer
+# Planetary Presence
 
 > **Explore the globe and establish your planetary presence.**
 

@@ -110,7 +110,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
-                    'Join Trailblazer today',
+                    'Join Planetary Presence today',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: subtitleColor,
                     ),

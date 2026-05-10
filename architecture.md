@@ -1,4 +1,4 @@
-# Trailblazer — Architecture
+# Planetary Presence — Architecture
 
 ## Tech Stack
 

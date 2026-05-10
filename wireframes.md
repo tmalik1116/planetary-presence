@@ -1,5 +1,5 @@
-### **App Summary: Trailblazer**
-Trailblazer is a gamified travel and cultural exploration application. It encourages users to explore the world by completing location-based "quests" in various categories (Nature, Culture, Food, Landmarks). Quests are crowd-sourced and community-voted, with points dynamically assigned based on rarity and difficulty. Users earn points to climb local, city, country, and global leaderboards, with a 2x point bonus applied to quests completed in their designated "Home City."
+### **App Summary: Planetary Presence**
+Planetary Presence is a gamified travel and cultural exploration application. It encourages users to explore the world by completing location-based "quests" in various categories (Nature, Culture, Food, Landmarks). Quests are crowd-sourced and community-voted, with points dynamically assigned based on rarity and difficulty. Users earn points to climb local, city, country, and global leaderboards, with a 2x point bonus applied to quests completed in their designated "Home City."
 
 ### **Global Navigation Architecture**
 The app is anchored by a persistent bottom navigation bar containing five primary destinations. The central button is visually distinct to encourage the primary action of the app (recording a quest).

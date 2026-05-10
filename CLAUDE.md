@@ -1,4 +1,4 @@
-# Trailblazer — Agent Guide
+# Planetary Presence — Agent Guide
 
 ## Project
 
@@ -30,11 +30,29 @@ Add a dated entry under **Changelog** at the bottom of this file.
 ### Build / Run
 **Never** run `flutter run`, `flutter build`, or any command that launches/validates the app. These fail or hang in this environment. When build validation is needed, tell the user what command to run and what to look for.
 
+### Hot Reload Warning
+If changes include any of the following, explicitly tell the user **"This requires a full restart (`flutter run`), not hot reload"**:
+- New packages added to `pubspec.yaml`
+- Changes to `AndroidManifest.xml` or `Info.plist`
+- New native plugins integrated
+- Changes to `android/` or `ios/` build files
+- Asset additions to `pubspec.yaml`
+
+### Human Validation
+**Before closing any GitHub issue**, ask the user to manually test the feature on device and confirm it works. Do not close the issue until the user explicitly says it's good. State clearly what to test and what the expected behavior is.
+
+### Issue Assignment
+**When starting work on a GitHub issue**, immediately assign it to `m-GDEV` so the partner knows it's in progress:
+```
+gh issue edit <number> --add-assignee m-GDEV --repo tmalik1116/planetary-presence
+```
+
 ### Code Style
 - Dart/Flutter conventions. No unnecessary comments.
 - Widgets in `lib/screens/` or `lib/widgets/` as appropriate.
 - State management TBD — await direction from user before choosing.
 - Keep files focused. Split large widgets.
+- All UI changes must reference design.md for colors, spacing, typography, and component style.
 
 ---
 
@@ -80,10 +98,11 @@ Central `+` button = primary action (record/complete quest). Visually distinct f
 | Flutter SDK | `flutter` | ✅ initialized |
 | Icons | `cupertino_icons ^1.0.8` | ✅ |
 | Charts | `fl_charts` | planned |
-| Maps | TBD | planned |
+| Maps | flutter_map ^8.1.1 + latlong2 ^0.9.1 | ✅ |
 | Backend | Supabase | ✅ `supabase_flutter ^2.8.4` |
 | Auth | Supabase Auth + google_sign_in ^6.2.2 | ✅ |
 | Database | Supabase Postgres + PostGIS | ✅ migration SQL ready |
+| Location | `geolocator ^13.0.2` | ✅ |
 | State mgmt | TBD | pending decision |
 
 ---
@@ -140,3 +159,12 @@ lib/
 | 2026-05-10 | Light mode + Settings screen with theme toggle | subagent |
 | 2026-05-10 | Auth: email/password + Google OAuth, onboarding (username + home city) | subagent |
 | 2026-05-10 | Design system: AppTheme, AppColors, AppSpacing, redesigned nav + cards | subagent |
+| 2026-05-10 | GPS location service, user coordinates update on login | subagent |
+| 2026-05-10 | Map screen: flutter_map integration, OSM tiles, placeholder city markers | subagent |
+| 2026-05-10 | Onboarding city autocomplete with Supabase search | subagent |
+| 2026-05-10 | Create Quest redesign: full-screen form, category grid, difficulty pills, city dropdown, hints field; migration 005 adds difficulty column | subagent |
+| 2026-05-10 | CityService + CityData model; map screen loads city pins from Supabase (#12) | subagent |
+| 2026-05-10 | Profile header: ProfileService, username/points/join date/home city display (#26) | subagent |
+| 2026-05-10 | Stats screen: StatsService, LeaderboardEntry model, global points leaderboard (#22) | subagent |
+| 2026-05-10 | Quest detail screen: read-only view with hero header, description, info, vote section; QuestCard taps navigate to it (#43) | subagent |
+| 2026-05-10 | Map split-view: city tap opens quest panel (55% map / 45% list), slide animation (#9) | subagent |

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import '../config/app_theme.dart';
 import '../models/quest.dart';
+import '../screens/quest_detail_screen.dart';
+import '../services/auth_service.dart';
 import '../services/quest_service.dart';
 
 class QuestCard extends StatelessWidget {
   final Quest quest;
-  final String testUserId;
   final VoidCallback? onVoted;
 
   const QuestCard({
     super.key,
     required this.quest,
-    required this.testUserId,
     this.onVoted,
   });
 
@@ -30,7 +30,8 @@ class QuestCard extends StatelessWidget {
 
   Future<void> _vote(BuildContext context, String vote) async {
     try {
-      await QuestService().voteQuest(quest.id, testUserId, vote);
+      final uid = AuthService.currentUser?.id ?? '';
+      await QuestService().voteQuest(quest.id, uid, vote);
       onVoted?.call();
     } catch (e) {
       if (context.mounted) {
@@ -53,7 +54,13 @@ class QuestCard extends StatelessWidget {
     final metaColor =
         isDark ? AppColors.dmTextSecondary : AppColors.textSecondary;
 
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => QuestDetailScreen(quest: quest),
+        ));
+      },
+      child: Container(
       margin: const EdgeInsets.symmetric(
         horizontal: AppSpacing.base,
         vertical: AppSpacing.sm,
@@ -119,6 +126,7 @@ class QuestCard extends StatelessWidget {
             ],
           ],
         ),
+      ),
       ),
     );
   }
