@@ -5,7 +5,7 @@ import '../screens/quest_detail_screen.dart';
 import '../services/auth_service.dart';
 import '../services/quest_service.dart';
 
-class QuestCard extends StatelessWidget {
+class QuestCard extends StatefulWidget {
   final Quest quest;
   final VoidCallback? onVoted;
 
@@ -15,8 +15,29 @@ class QuestCard extends StatelessWidget {
     this.onVoted,
   });
 
+  @override
+  State<QuestCard> createState() => _QuestCardState();
+}
+
+class _QuestCardState extends State<QuestCard> {
+  String? _userVote;
+  bool _voteLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserVote();
+  }
+
+  Future<void> _loadUserVote() async {
+    final uid = AuthService.currentUser?.id;
+    if (uid == null) return;
+    final vote = await QuestService().getUserVote(widget.quest.id, uid);
+    if (mounted) setState(() => _userVote = vote);
+  }
+
   String get _categoryLabel {
-    switch (quest.category) {
+    switch (widget.quest.category) {
       case QuestCategory.nature:
         return 'Nature';
       case QuestCategory.culture:
@@ -29,16 +50,26 @@ class QuestCard extends StatelessWidget {
   }
 
   Future<void> _vote(BuildContext context, String vote) async {
+    if (_voteLoading) return;
+    final uid = AuthService.currentUser?.id ?? '';
+    setState(() => _voteLoading = true);
     try {
-      final uid = AuthService.currentUser?.id ?? '';
-      await QuestService().voteQuest(quest.id, uid, vote);
-      onVoted?.call();
+      if (_userVote == vote) {
+        await QuestService().removeVote(widget.quest.id, uid);
+        setState(() => _userVote = null);
+      } else {
+        await QuestService().voteQuest(widget.quest.id, uid, vote);
+        setState(() => _userVote = vote);
+      }
+      widget.onVoted?.call();
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Vote failed: $e')),
         );
       }
+    } finally {
+      if (mounted) setState(() => _voteLoading = false);
     }
   }
 
@@ -48,7 +79,7 @@ class QuestCard extends StatelessWidget {
     final cardBg = isDark ? AppColors.dmCard : AppColors.background;
     final borderColor = isDark ? AppColors.dmBorder : AppColors.cardBorder;
     final categoryColor =
-        AppColors.categoryColor(quest.category.value, darkMode: isDark);
+        AppColors.categoryColor(widget.quest.category.value, darkMode: isDark);
     final titleColor =
         isDark ? AppColors.dmTextPrimary : AppColors.textPrimary;
     final metaColor =
@@ -57,7 +88,7 @@ class QuestCard extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => QuestDetailScreen(quest: quest),
+          builder: (_) => QuestDetailScreen(quest: widget.quest),
         ));
       },
       child: Container(
@@ -88,7 +119,7 @@ class QuestCard extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.sm),
                       Text(
-                        quest.title,
+                        widget.quest.title,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -99,14 +130,14 @@ class QuestCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
-                _PointsBadge(points: quest.currentPoints),
+                _PointsBadge(points: widget.quest.currentPoints),
               ],
             ),
-            if (quest.description != null &&
-                quest.description!.isNotEmpty) ...[
+            if (widget.quest.description != null &&
+                widget.quest.description!.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
-                quest.description!,
+                widget.quest.description!,
                 style: TextStyle(
                   fontSize: 13,
                   color: metaColor,
@@ -115,13 +146,14 @@ class QuestCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            if (quest.status == QuestStatus.pending) ...[
+            if (widget.quest.status == QuestStatus.pending) ...[
               const SizedBox(height: AppSpacing.md),
               _VoteRow(
-                netVotes: quest.netVotes,
+                netVotes: widget.quest.netVotes,
                 onUpvote: () => _vote(context, 'up'),
                 onDownvote: () => _vote(context, 'down'),
                 isDark: isDark,
+                userVote: _userVote,
               ),
             ],
           ],
@@ -191,12 +223,14 @@ class _VoteRow extends StatelessWidget {
   final VoidCallback onUpvote;
   final VoidCallback onDownvote;
   final bool isDark;
+  final String? userVote;
 
   const _VoteRow({
     required this.netVotes,
     required this.onUpvote,
     required this.onDownvote,
     required this.isDark,
+    required this.userVote,
   });
 
   @override
@@ -213,6 +247,7 @@ class _VoteRow extends StatelessWidget {
           onTap: onUpvote,
           color: AppColors.categoryNature,
           borderColor: borderColor,
+          isActive: userVote == 'up',
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
@@ -231,6 +266,7 @@ class _VoteRow extends StatelessWidget {
           onTap: onDownvote,
           color: AppColors.categoryFood,
           borderColor: borderColor,
+          isActive: userVote == 'down',
         ),
       ],
     );
@@ -243,6 +279,7 @@ class _VotePill extends StatelessWidget {
   final VoidCallback onTap;
   final Color color;
   final Color borderColor;
+  final bool isActive;
 
   const _VotePill({
     required this.icon,
@@ -250,6 +287,7 @@ class _VotePill extends StatelessWidget {
     required this.onTap,
     required this.color,
     required this.borderColor,
+    required this.isActive,
   });
 
   @override
@@ -259,8 +297,9 @@ class _VotePill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
+          color: isActive ? color.withValues(alpha: 0.15) : null,
           borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(color: borderColor),
+          border: Border.all(color: isActive ? color : borderColor),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -271,7 +310,7 @@ class _VotePill extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
                 color: color,
               ),
             ),
