@@ -19,10 +19,11 @@ class CityData {
   });
 
   factory CityData.fromMap(Map<String, dynamic> map) {
-    final coords = map['coordinates'] as Map<String, dynamic>;
-    final coordList = coords['coordinates'] as List<dynamic>;
-    final lng = (coordList[0] as num).toDouble();
-    final lat = (coordList[1] as num).toDouble();
+    final wkt = map['coordinates'] as String;
+    final inner = wkt.substring(wkt.indexOf('(') + 1, wkt.indexOf(')'));
+    final parts = inner.split(' ');
+    final lng = double.parse(parts[0]);
+    final lat = double.parse(parts[1]);
     return CityData(
       id: map['id'] as String,
       name: map['name'] as String,
