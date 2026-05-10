@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../config/app_theme.dart';
+import '../services/city_service.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -12,17 +13,41 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
+  final CityService _cityService = CityService();
 
   static const LatLng _initialCenter = LatLng(20.0, 0.0);
   static const double _initialZoom = 2.5;
 
-  static const List<_CityMarker> _cities = [
-    _CityMarker('Toronto', LatLng(43.6532, -79.3832)),
-    _CityMarker('Paris', LatLng(48.8566, 2.3522)),
-    _CityMarker('Tokyo', LatLng(35.6762, 139.6503)),
-    _CityMarker('Sydney', LatLng(-33.8688, 151.2093)),
-    _CityMarker('Nairobi', LatLng(-1.2921, 36.8219)),
-  ];
+  List<CityData> _cities = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCities();
+  }
+
+  Future<void> _loadCities() async {
+    try {
+      final cities = await _cityService.getCities();
+      if (mounted) {
+        setState(() {
+          _cities = cities;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to load cities. Please try again later.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -60,7 +85,7 @@ class _MapScreenState extends State<MapScreen> {
                 markers: _cities
                     .map(
                       (city) => Marker(
-                        point: city.latLng,
+                        point: LatLng(city.lat, city.lng),
                         width: 32,
                         height: 32,
                         child: Container(
@@ -82,6 +107,10 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ],
           ),
+          if (_loading)
+            const Center(
+              child: CircularProgressIndicator(),
+            ),
           Positioned(
             top: MediaQuery.of(context).padding.top + AppSpacing.base,
             right: AppSpacing.base,
@@ -97,13 +126,6 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
   }
-}
-
-class _CityMarker {
-  final String name;
-  final LatLng latLng;
-
-  const _CityMarker(this.name, this.latLng);
 }
 
 class _ZoomControls extends StatelessWidget {

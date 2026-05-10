@@ -161,3 +161,4 @@ lib/
 | 2026-05-10 | GPS location service, user coordinates update on login | subagent |
 | 2026-05-10 | Map screen: flutter_map integration, OSM tiles, placeholder city markers | subagent |
 | 2026-05-10 | Onboarding city autocomplete with Supabase search | subagent |
+| 2026-05-10 | CityService + CityData model; map screen loads city pins from Supabase (#12) | subagent |
