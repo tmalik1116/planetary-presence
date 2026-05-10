@@ -160,3 +160,4 @@ lib/
 | 2026-05-10 | Design system: AppTheme, AppColors, AppSpacing, redesigned nav + cards | subagent |
 | 2026-05-10 | GPS location service, user coordinates update on login | subagent |
 | 2026-05-10 | Map screen: flutter_map integration, OSM tiles, placeholder city markers | subagent |
+| 2026-05-10 | Onboarding city autocomplete with Supabase search | subagent |
