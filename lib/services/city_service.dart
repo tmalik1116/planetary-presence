@@ -35,7 +35,7 @@ class CityService {
     try {
       AppLogger.i('CityService: fetching cities from Supabase');
       final response = await SupabaseService.client
-          .from('cities_view')
+          .from('cities')
           .select('id, name, country, state, lat, lng');
 
       final cities = (response as List<dynamic>)
