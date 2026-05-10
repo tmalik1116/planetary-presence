@@ -97,8 +97,7 @@ class Quest {
       createdAt: DateTime.parse(json['created_at'] as String),
       currentPoints: json['current_points'] as int,
       completionCount: json['completion_count'] as int,
-      avgDifficultyRating:
-          (json['avg_difficulty_rating'] as num).toDouble(),
+      avgDifficultyRating: (json['avg_difficulty_rating'] as num).toDouble(),
       ratingCount: json['rating_count'] as int,
       netVotes: json['net_votes'] as int,
     );

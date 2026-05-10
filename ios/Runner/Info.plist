@@ -66,5 +66,12 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- image_picker permissions -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Trailblazer needs access to your photo library to attach proof of quest completion.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Trailblazer needs camera access to capture proof of quest completion.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Trailblazer needs microphone access when recording video proof of quest completion.</string>
 </dict>
 </plist>
